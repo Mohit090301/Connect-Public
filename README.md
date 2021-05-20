@@ -4,7 +4,16 @@ With over 4000 lines of code and many days of struggle, I have built my Chat App
 
 The database used for storing user's data(name, email, profile pic only) and chats is Firebase(which is a NoSQL database made by Google).The code is mainly written in dart programming language and a small part of it is written in Java Script.
 
-The app consists of 9 screens.
+![Screenshot from 2021-05-20 13-09-48](https://user-images.githubusercontent.com/58728847/118939304-28ae0880-b96d-11eb-8a00-0b6a3a45bffb.png)
+![Screenshot from 2021-05-20 13-10-00](https://user-images.githubusercontent.com/58728847/118938935-cbb25280-b96c-11eb-9b5c-9707a2107cba.png)
+![Screenshot from 2021-05-20 13-04-59](https://user-images.githubusercontent.com/58728847/118939282-221f9100-b96d-11eb-96d8-9014643d390c.png)
+![Screenshot from 2021-05-20 13-09-35](https://user-images.githubusercontent.com/58728847/118939293-25b31800-b96d-11eb-9f2b-acb064a95735.png)
+![Screenshot from 2021-05-20 13-10-00](https://user-images.githubusercontent.com/58728847/118939835-bd186b00-b96d-11eb-9c9b-72d30c352944.png)
+![Screenshot from 2021-05-20 13-16-10](https://user-images.githubusercontent.com/58728847/118939851-c1448880-b96d-11eb-9ad8-3ec0627e5a75.png)
+![Screenshot from 2021-05-20 13-17-08](https://user-images.githubusercontent.com/58728847/118939855-c30e4c00-b96d-11eb-88ad-bbc2b54bfb63.png)
+
+
+The app consists of 10 screens.
 1)Sign up screen - In this screen, one can sign up by providing their username, email and password(There are certain restrictions like the username can't be less than 4 letters, password must be atleast 8 characters and the mail shoukd be in proper format)
 2)Sign In screen - In this screen, one can sign in with his/her email and password provided at the time of signup.
 3)Chat Room Screen - In this screen you can see the names of all the user's you have messaged, and the settings, profile and search icon.
