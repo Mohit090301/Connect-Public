@@ -1,4 +1,5 @@
 # CONNECT
+### Chat Application
 
 With over 4000 lines of code and many days of struggle, I have built my Chat Application named "Connect" right from scratch using Flutter.
 
@@ -13,28 +14,28 @@ The database used for storing user's data(name, email, profile pic only) and cha
 ![Screenshot from 2021-05-20 13-17-08](https://user-images.githubusercontent.com/58728847/118939855-c30e4c00-b96d-11eb-88ad-bbc2b54bfb63.png)
 
 
-The app consists of 10 screens.
-1)Sign up screen - In this screen, one can sign up by providing their username, email and password(There are certain restrictions like the username can't be less than 4 letters, password must be atleast 8 characters and the mail shoukd be in proper format)
-2)Sign In screen - In this screen, one can sign in with his/her email and password provided at the time of signup.
-3)Chat Room Screen - In this screen you can see the names of all the user's you have messaged, and the settings, profile and search icon.
-4)Search screen - By tapping at the search button in the Chat Room screen you will be taken to this screen where you can search any user (by their username) you want to text.
-5)Conversation Screen - In this screen, you can see the profile pic, name and status(whether typing, online or last seen at some time) of the user you are talking to and also all the messages you have sent to each other in proper order.This is the screen where you can "Connect" with the other user.
-6)Change Profile Screen - By tapping on the profile button in the Chat Room screen, you will be taken to this screen where you can see your own username and email that you provided at the time of Sign Up and in this screen you also have an option to see, update, remove or add your profile pic.
-7)Profile pic of the user -In this screen you can see the profile pic, username and email of the any user you have messaged.
-8)Settings screen - In this screen the user has an option to change the theme of the app, log out from the app and change wallpaper for both dark and light theme respectively.
-9)Unique Profile Pic Screen - In this screen one can change his/her profile pic and that change would be reflected only for a particular user.
-10)Wallpaper Screen - In this screen the user can choose one of the four options for both dark and light theme to set their conversation screen wallapper.
+The app consists of 10 screens:-
+* Sign up screen - In this screen, one can sign up by providing their username, email and password(There are certain restrictions like the username can't be less than 4 letters, password must be atleast 8 characters and the mail shoukd be in proper format)
+* Sign In screen - In this screen, one can sign in with his/her email and password provided at the time of signup.
+* Chat Room Screen - In this screen you can see the names of all the user's you have messaged, and the settings, profile and search icon.
+* Search screen - By tapping at the search button in the Chat Room screen you will be taken to this screen where you can search any user (by their username) you want to text.
+* Conversation Screen - In this screen, you can see the profile pic, name and status(whether typing, online or last seen at some time) of the user you are talking to and also all the messages you have sent to each other in proper order.This is the screen where you can "Connect" with the other user.
+* Change Profile Screen - By tapping on the profile button in the Chat Room screen, you will be taken to this screen where you can see your own username and email that you provided at the time of Sign Up and in this screen you also have an option to see, update, remove or add your profile pic.
+* Profile pic of the user -In this screen you can see the profile pic, username and email of the any user you have messaged.
+* Settings screen - In this screen the user has an option to change the theme of the app, log out from the app and change wallpaper for both dark and light theme respectively.
+* Unique Profile Pic Screen - In this screen one can change his/her profile pic and that change would be reflected only for a particular user.
+* Wallpaper Screen - In this screen the user can choose one of the four options for both dark and light theme to set their conversation screen wallapper.
 
 Packages used:-
-1)"firebase_auth" - For enabling android Authentication using email and password 
-2)"cloud_firestore" - For storing data in firestore database and also accessing data from it.
-3)"shared_preferences" - For reading and writing simple key value pairs.
-4)"date_time_format" - For easy formatting of Date and time.
-5)"http" - For accessing data via web using http link.
-6)"firebase_messaging" - This plugin helps to use Firebase Cloud Messaging API.
-7)"path_provider" - For getting the path of the profile pic uploaded by the user in the Firebase Storage.
-8)"cupertino_icons" - For using "eye" icon.
-9)"cached_network_image" - For caching all the network images so as to render them faster.
+1. "firebase_auth" - For enabling android Authentication using email and password 
+2. "cloud_firestore" - For storing data in firestore database and also accessing data from it.
+3. "shared_preferences" - For reading and writing simple key value pairs.
+4. "date_time_format" - For easy formatting of Date and time.
+5. "http" - For accessing data via web using http link.
+6. "firebase_messaging" - This plugin helps to use Firebase Cloud Messaging API.
+7. "path_provider" - For getting the path of the profile pic uploaded by the user in the Firebase Storage.
+8. "cupertino_icons" - For using "eye" icon.
+9. "cached_network_image" - For caching all the network images so as to render them faster.
 
 -v1.0.0 -> Initial release with basic features(Sign In, Sign Up, searching for a particular user from their username and chatting with the user)
 
