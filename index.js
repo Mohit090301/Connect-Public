@@ -75,3 +75,70 @@ exports.notifyNewMessage = functions.firestore.
                console.log('Message Sent Successfully');
       }
     });
+
+exports.notifyGroupMessage = functions.firestore.
+    document("groups/{groupId}/chats/{chatId}").
+    onCreate(async (snapshot) => {
+      const msg = snapshot.data();
+      console.log(msg.sendBy);
+      var groupName = msg.groupName;
+      var sendBy = msg.sendBy;
+      var isImage = msg.isImage;
+      var receivedBy = msg.receivedBy;
+      console.log(isImage);
+      var deviceTokens = [];
+      for(var rb of receivedBy)
+      {
+        console.log(rb);
+        if(rb!=sendBy){
+            var dt = await db.collection("users")
+              .doc(rb)
+              .collection("tokens").get();
+            deviceTokens.push(dt);
+        }
+      }
+
+      var tokens = [];
+      for(var dt of deviceTokens){
+        for(var tkn of dt.docs){
+            tokens.push(tkn.data().token);
+        }
+      }
+      console.log(tokens);
+      if(isImage){
+      console.log(msg.message);
+      const payload = {
+      notification: {
+          title: groupName,
+          body: sendBy + " : Image",
+          icon: "ic_sharp_connect_without_contact_24",
+          tag: msg.sendBy,
+          image: msg.message,
+          picture: msg.message,
+          priority: "max",
+          imageUrl: msg.message,
+        },
+        data : {
+          click_action: 'FLUTTER_NOTIFICATION_CLICK',
+        }
+        };
+        const res = await fcm.sendToDevice(tokens, payload);
+              console.log('Message Sent Successfully');
+      }
+      else
+      {
+         const payload = {
+                    notification: {
+                      title: groupName,
+                      body: sendBy + " : " + msg.message,
+                      icon: "ic_sharp_connect_without_contact_24",
+                      tag: msg.sendBy,
+                    },
+                    data : {
+                      click_action: 'FLUTTER_NOTIFICATION_CLICK',
+                    }
+                  };
+         const res = await fcm.sendToDevice(tokens, payload);
+               console.log('Message Sent Successfully');
+      }
+    });

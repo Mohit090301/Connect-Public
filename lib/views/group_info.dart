@@ -1,45 +1,38 @@
 import 'dart:io';
 
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/cupertino.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_chat_app/helper/constants.dart';
 import 'package:flutter_chat_app/services/database.dart';
 import 'package:flutter_chat_app/views/show_image.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 
-class ProfilePic extends StatefulWidget {
-  String email;
+class GroupInfo extends StatefulWidget {
+  String groupName;
+  List<dynamic> users;
+  String groupId;
   bool isWhite;
-
-
-  ProfilePic({this.email, this.isWhite});
+  String groupPicUrl;
+  GroupInfo({this.groupName, this.users, this.isWhite, this.groupId, this.groupPicUrl});
 
   @override
-  _ProfilePicState createState() => _ProfilePicState();
+  _GroupInfoState createState() => _GroupInfoState();
 }
 
-class _ProfilePicState extends State<ProfilePic> {
+class _GroupInfoState extends State<GroupInfo> {
   DataBaseMethods dataBaseMethods = new DataBaseMethods();
   File image;
   String uploadedFileURL;
   final picker = ImagePicker();
-  String imageUrl;
   bool profilePicUploading;
 
   @override
   void initState() {
     profilePicUploading = false;
     print('Init state called');
-    dataBaseMethods.getUserByUsername(Constants.myName).then((snapshot) {
-      setState(() {
-        imageUrl = snapshot.docs[0].data()["profilePicURL"];
-        print(imageUrl);
-      });
-    });
 
-    // setOnlineStatus();
     super.initState();
   }
 
@@ -71,11 +64,8 @@ class _ProfilePicState extends State<ProfilePic> {
       print("complete");
     });
     var downloadUrl = await snapshot.ref.getDownloadURL();
+    await dataBaseMethods.updateGroupPicUrl(downloadUrl, widget.groupId);
     print(downloadUrl.toString());
-    await dataBaseMethods.updateProfilePicUrl(downloadUrl.toString(),
-        Constants.myName);
-    await dataBaseMethods.updateUrlEverywhere(downloadUrl.toString(),
-        Constants.myName);
     print('File Uploaded');
     final snackBar = SnackBar(
       content: Text(
@@ -87,15 +77,17 @@ class _ProfilePicState extends State<ProfilePic> {
     );
     ScaffoldMessenger.of(context).showSnackBar(snackBar);
     setState(() {
-      imageUrl = downloadUrl;
+      widget.groupPicUrl = downloadUrl;
       profilePicUploading = false;
     });
   }
 
   removeProfilePic(context) async {
-    await dataBaseMethods.updateProfilePicUrl("", Constants.myName);
-    await dataBaseMethods.updateUrlEverywhere("", Constants.myName);
+    await dataBaseMethods.updateGroupPicUrl("", widget.groupId);
     print("Done");
+    setState(() {
+      widget.groupPicUrl = "";
+    });
     final snackBar = SnackBar(
       content: Text("Profile Pic Removed Successfully!!"),
       duration: Duration(milliseconds: 900),
@@ -112,7 +104,7 @@ class _ProfilePicState extends State<ProfilePic> {
       appBar: AppBar(
         backgroundColor: widget.isWhite ? Colors.teal[700] : Colors.teal[900],
         title: Text(
-          'Profile',
+          'Group Info',
           style: TextStyle(
             fontSize: 22,
             color: Colors.white,
@@ -123,7 +115,7 @@ class _ProfilePicState extends State<ProfilePic> {
       ),
       body: WillPopScope(
         onWillPop: () async {
-          Navigator.pop(context);
+          Navigator.pop(context, widget.groupPicUrl);
           return false;
         },
         child: Padding(
@@ -137,7 +129,7 @@ class _ProfilePicState extends State<ProfilePic> {
                   print("add profile pic");
                 },
                 child: Container(
-                  height: 200,
+                  height: 150,
                   child: Center(
                     child: Stack(
                       children: [
@@ -146,13 +138,13 @@ class _ProfilePicState extends State<ProfilePic> {
                             children: [
                               Container(
                                 alignment: Alignment.center,
-                                height: 200,
-                                width: 200,
+                                height: 150,
+                                width: 150,
                                 decoration: BoxDecoration(
                                   image: DecorationImage(
                                     fit: BoxFit.cover,
-                                    image: imageUrl != null && imageUrl != ""
-                                        ? CachedNetworkImageProvider(imageUrl)
+                                    image: widget.groupPicUrl != null && widget.groupPicUrl != ""
+                                        ? CachedNetworkImageProvider(widget.groupPicUrl)
                                         : AssetImage('assets/empty_pic.jpeg'),
                                   ),
                                   color: widget.isWhite
@@ -163,18 +155,16 @@ class _ProfilePicState extends State<ProfilePic> {
                               ),
                               Container(
                                 alignment: Alignment.center,
-                                color: imageUrl == null || imageUrl == ""
-                                    ? Colors.black38
-                                    : Colors.transparent,
-                                height: 200,
-                                width: 200,
+                                color: Colors.black26,
+                                height: 150,
+                                width: 150,
                                 child: profilePicUploading
                                     ? CircularProgressIndicator()
                                     : Icon(
-                                        Icons.camera_alt,
-                                        color: Colors.white,
-                                        size: 30,
-                                      ),
+                                  Icons.camera_alt,
+                                  color: Colors.white,
+                                  size: 30,
+                                ),
                               ),
                             ],
                           ),
@@ -190,7 +180,7 @@ class _ProfilePicState extends State<ProfilePic> {
               Center(
                 child: GestureDetector(
                   onTap: () async {
-                    if (imageUrl != null && imageUrl != "") {
+                    if (widget.groupPicUrl != null && widget.groupPicUrl != "") {
                       print("Removing DP");
                       profilePicUploading = true;
                       setState(() {});
@@ -227,9 +217,9 @@ class _ProfilePicState extends State<ProfilePic> {
                         context,
                         MaterialPageRoute(
                             builder: (context) => ShowImage(
-                                imageUrl: imageUrl,
-                                appBarText: Constants.myName,
-                                tag: Constants.myName,
+                              imageUrl: widget.groupPicUrl,
+                              appBarText: Constants.myName,
+                              tag: Constants.myName,
                             )));
                   },
                   child: Text(
@@ -252,7 +242,7 @@ class _ProfilePicState extends State<ProfilePic> {
                 color: widget.isWhite ? Colors.black : Colors.grey,
               ),
               Text(
-                'Username',
+                'Group Name',
                 style: TextStyle(
                   color: widget.isWhite ? Colors.black : Colors.grey,
                   letterSpacing: 2.0,
@@ -263,7 +253,7 @@ class _ProfilePicState extends State<ProfilePic> {
                 height: 4,
               ),
               Text(
-                Constants.myName,
+                widget.groupName,
                 style: TextStyle(
                   color: widget.isWhite ? Colors.black : Colors.white,
                   letterSpacing: 2.0,
@@ -275,7 +265,7 @@ class _ProfilePicState extends State<ProfilePic> {
                 height: 30,
               ),
               Text(
-                'Email',
+                'Members',
                 style: TextStyle(
                   color: widget.isWhite ? Colors.black : Colors.grey,
                   letterSpacing: 2.0,
@@ -283,17 +273,21 @@ class _ProfilePicState extends State<ProfilePic> {
                 ),
               ),
               SizedBox(
-                height: 4,
+                height: 10,
               ),
-              Text(
-                widget.email != null ? widget.email : "null",
-                style: TextStyle(
-                  color: widget.isWhite ? Colors.black : Colors.white,
-                  letterSpacing: 2.0,
-                  fontSize: 24,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
+              Container(
+                width: MediaQuery.of(context).size.width - 50,
+                  height: MediaQuery.of(context).size.height/3 - 30,
+                  child: ListView.builder(
+                    scrollDirection: Axis.vertical,
+                    itemCount: widget.users.length,
+                    itemBuilder: (context, index){
+                      return UserTile(
+                        username: widget.users[index],
+                        isWhite: widget.isWhite,
+                      );
+                    },
+                  )),
             ],
           ),
         ),
@@ -301,3 +295,25 @@ class _ProfilePicState extends State<ProfilePic> {
     );
   }
 }
+
+class UserTile extends StatelessWidget {
+  String username;
+  bool isWhite;
+  UserTile({this.username, this.isWhite});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 30,
+      child: Text(
+        username,
+        style: TextStyle(
+          color: isWhite ? Colors.black : Colors.white,
+          fontSize: 21,
+          fontWeight: FontWeight.bold
+        ),
+      ),
+    );
+  }
+}
+

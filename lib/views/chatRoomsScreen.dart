@@ -16,6 +16,8 @@ import 'package:flutter_chat_app/views/settings.dart';
 import 'package:flutter_chat_app/views/show_image.dart';
 import 'package:intl/intl.dart';
 
+import 'groupChatScreen.dart';
+
 Stream repeat;
 
 class ChatRoom extends StatefulWidget {
@@ -27,10 +29,12 @@ class ChatRoom extends StatefulWidget {
   _ChatRoomState createState() => _ChatRoomState();
 }
 
-class _ChatRoomState extends State<ChatRoom> with WidgetsBindingObserver {
+class _ChatRoomState extends State<ChatRoom>
+    with WidgetsBindingObserver, TickerProviderStateMixin {
   AuthMethods authMethods = new AuthMethods();
   DataBaseMethods dataBaseMethods = new DataBaseMethods();
   Stream chatRoomsStream;
+  Stream groupStream;
   String username = "";
   String lastmessage = "";
   String lastMessagetime;
@@ -39,13 +43,13 @@ class _ChatRoomState extends State<ChatRoom> with WidgetsBindingObserver {
   Stream messageStream;
   String blackbg = "";
   String whitebg = "";
+  TabController _controller;
 
   Widget ChatRoomList() {
     return StreamBuilder(
         initialData: repeat,
         stream: repeat,
         builder: (context, snapshot) {
-          print("Building");
           return Container(
             child: StreamBuilder(
               stream: chatRoomsStream,
@@ -130,15 +134,44 @@ class _ChatRoomState extends State<ChatRoom> with WidgetsBindingObserver {
         });
   }
 
+  Widget groupList() {
+    print("Called group List");
+    return StreamBuilder(
+      stream: groupStream,
+      builder: (context, snapshot) {
+        return snapshot.hasData
+            ? ListView.builder(
+                itemCount: snapshot.data.docs.length,
+                itemBuilder: (context, index) {
+                  print(snapshot.data.docs[index].data()["users"]);
+                  return GroupTile(
+                    groupName: snapshot.data.docs[index].data()["groupName"],
+                    groupPicUrl:
+                        snapshot.data.docs[index].data()["groupPicUrl"],
+                    isWhite: isWhite,
+                    groupId: snapshot.data.docs[index].data()["groupId"],
+                    blackbg: blackbg,
+                    whitebg: whitebg,
+                    receivedBy: snapshot.data.docs[index].data()["users"],
+                  );
+                })
+            : Container();
+      },
+    );
+  }
+
   @override
   void initState() {
-    print("Calling get user info");
+    _controller = TabController(vsync: this, length: 2);
+    _controller.addListener(() {
+      getUserInfo();
+    });
     getUserInfo();
     WidgetsBinding.instance.addObserver(this);
     super.initState();
   }
 
-  void getChats() async{
+  void getChats() async {
     await dataBaseMethods.getChatRooms(Constants.myName).then((value) {
       setState(() {
         print(value.toString() + "value");
@@ -180,7 +213,6 @@ class _ChatRoomState extends State<ChatRoom> with WidgetsBindingObserver {
     Map<String, String> statusMap = {"TypingTo": "NoOne"};
     await dataBaseMethods.getChatRooms(Constants.myName).then((value) {
       setState(() {
-        print(value.toString() + "value");
         chatRoomsStream = value;
       });
     });
@@ -197,81 +229,133 @@ class _ChatRoomState extends State<ChatRoom> with WidgetsBindingObserver {
         }
       });
     });
+    dataBaseMethods.getGroups().then((value) {
+      setState(() {
+        groupStream = value;
+      });
+    });
     await dataBaseMethods.setTypingStatus(statusMap);
   }
 
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: isWhite ? Colors.grey[100] : Colors.black54,
-      appBar: AppBar(
-        backgroundColor: isWhite ? Colors.teal[700] : Colors.teal[900],
-        title: Text(
-          'CONNECT',
-          style: TextStyle(
-            fontSize: 22,
-            color: isWhite ? Colors.grey[100] : Colors.white70,
-          ),
-        ),
-        brightness: Brightness.dark,
-        centerTitle: false,
-        actions: [
-          InkWell(
-            onTap: () {
-              Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => settings(
-                            value: isWhite,
-                          ))).then((value) {
-                if (mounted) {
-                  setState(() {
-                    isWhite = value[0];
-                    whitebg = value[1] == "" ? whitebg : value[1];
-                    blackbg = value[2] == "" ? blackbg : value[2];
+    return DefaultTabController(
+      child: Scaffold(
+          backgroundColor: isWhite ? Colors.grey[100] : Colors.black54,
+          appBar: AppBar(
+            backgroundColor: isWhite ? Colors.teal[700] : Colors.teal[900],
+            title: Text(
+              'CONNECT',
+              style: TextStyle(
+                  fontSize: 24,
+                  color: isWhite ? Colors.grey[100] : Colors.white70,
+                  fontWeight: FontWeight.w700),
+            ),
+            brightness: Brightness.dark,
+            centerTitle: false,
+            actions: [
+              InkWell(
+                onTap: () {
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => settings(
+                                value: isWhite,
+                              ))).then((value) {
+                    if (mounted) {
+                      setState(() {
+                        isWhite = value[0];
+                        whitebg = value[1] == "" ? whitebg : value[1];
+                        blackbg = value[2] == "" ? blackbg : value[2];
+                      });
+                    }
                   });
-                }
-              });
-            },
-            child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 4),
-                child: Icon(
-                  Icons.settings,
-                  size: 21,
-                )),
-          ),
-          InkWell(
-            onTap: () {
-              Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => SearchScreen(
-                            isWhite: isWhite,
-                            whiteBg: whitebg,
-                            blackBg: blackbg,
-                          )));
-            },
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 5),
-              child: Icon(Icons.search),
+                },
+                child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: 4),
+                    child: Icon(
+                      Icons.settings,
+                      size: 21,
+                    )),
+              ),
+              InkWell(
+                onTap: () {
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => SearchScreen(
+                                isWhite: isWhite,
+                                whiteBg: whitebg,
+                                blackBg: blackbg,
+                              )));
+                },
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 5),
+                  child: Icon(Icons.search),
+                ),
+              ),
+              InkWell(
+                onTap: () {
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => ProfilePic(
+                                email: widget.email,
+                                isWhite: isWhite,
+                              ))).then((value) {});
+                },
+                child: Container(
+                    padding: EdgeInsets.fromLTRB(0, 0, 12, 0),
+                    child: Icon(Icons.person_rounded)),
+              ),
+            ],
+            bottom: TabBar(
+              indicatorColor: Colors.white,
+              labelColor: Colors.white,
+              controller: _controller,
+              indicatorWeight: 2.5,
+              tabs: [
+                Tab(
+                  child: Text(
+                    "CHATS",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+                  ),
+                ),
+                Tab(
+                  child: Text(
+                    "GROUPS",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+                  ),
+                )
+              ],
             ),
           ),
-          InkWell(
-            onTap: () {
-              Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => ProfilePic(
-                            email: widget.email,
-                            isWhite: isWhite,
-                          ))).then((value) {});
-            },
-            child: Container(
-                padding: EdgeInsets.fromLTRB(0, 0, 12, 0),
-                child: Icon(Icons.person_rounded)),
-          ),
-        ],
-      ),
-      body: ChatRoomList()
+          body: TabBarView(
+            controller: _controller,
+            children: [
+              ChatRoomList(),
+              Stack(
+                children: [
+                  groupList(),
+                  Positioned(
+                    bottom: 30,
+                    right: 15,
+                    child: FloatingActionButton(
+                      onPressed: () {},
+                      child: Icon(Icons.group),
+                      tooltip: "New Group",
+                    ),
+                  )
+                ],
+              )
+            ],
+          )),
+      length: 2,
     );
   }
 }
@@ -410,9 +494,9 @@ class _ChatRoomsTileState extends State<ChatRoomsTile> {
                                         context,
                                         MaterialPageRoute(
                                             builder: (context) => ShowImage(
-                                                  imageUrl: widget.url,
-                                                  appBarText: widget.username,
-                                                )));
+                                                imageUrl: widget.url,
+                                                appBarText: widget.username,
+                                                tag: widget.username)));
                                   },
                                   child: Container(
                                     alignment: Alignment.center,
@@ -440,24 +524,30 @@ class _ChatRoomsTileState extends State<ChatRoomsTile> {
                                         builder: (context) => ShowImage(
                                               imageUrl: widget.url,
                                               appBarText: widget.username,
+                                              tag: widget.username,
                                             )));
                               },
-                              child: Container(
-                                alignment: Alignment.center,
-                                height: 43,
-                                width: 43,
-                                decoration: BoxDecoration(
-                                  color: widget.isWhite
-                                      ? Colors.teal[700]
-                                      : Colors.teal[900],
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Text(
-                                  widget.username.substring(0, 1).toUpperCase(),
-                                  style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w600),
+                              child: Hero(
+                                tag: widget.username,
+                                child: Container(
+                                  alignment: Alignment.center,
+                                  height: 43,
+                                  width: 43,
+                                  decoration: BoxDecoration(
+                                    color: widget.isWhite
+                                        ? Colors.teal[700]
+                                        : Colors.teal[900],
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(
+                                    widget.username
+                                        .substring(0, 1)
+                                        .toUpperCase(),
+                                    style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w600),
+                                  ),
                                 ),
                               ),
                             ),
@@ -626,6 +716,122 @@ class _ChatRoomsTileState extends State<ChatRoomsTile> {
                 )
               : Container();
         });
+  }
+}
+
+class GroupTile extends StatefulWidget {
+  String groupName;
+  String groupPicUrl;
+  bool isWhite;
+  String groupId;
+  String blackbg;
+  String whitebg;
+  List<dynamic> receivedBy;
+
+  GroupTile(
+      {this.groupName,
+      this.groupPicUrl,
+      this.isWhite,
+      this.groupId,
+      this.whitebg,
+      this.blackbg,
+      this.receivedBy});
+
+  @override
+  _GroupTileState createState() => _GroupTileState();
+}
+
+class _GroupTileState extends State<GroupTile> {
+  @override
+  Widget build(BuildContext context) {
+    print(widget.groupName);
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      child: Row(
+        children: [
+          InkWell(
+            onTap: () {
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => ShowImage(
+                            imageUrl: widget.groupPicUrl,
+                            appBarText: widget.groupName,
+                          )));
+            },
+            child: widget.groupPicUrl == null || widget.groupPicUrl == ""
+                ? Container(
+                    alignment: Alignment.center,
+                    height: 43,
+                    width: 43,
+                    decoration: BoxDecoration(
+                      color:
+                          widget.isWhite ? Colors.teal[700] : Colors.teal[900],
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      widget.groupName.substring(0, 1).toUpperCase(),
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600),
+                    ),
+                  )
+                : Container(
+                    alignment: Alignment.center,
+                    height: 43,
+                    width: 43,
+                    decoration: BoxDecoration(
+                      image: DecorationImage(
+                        fit: BoxFit.cover,
+                        image: CachedNetworkImageProvider(widget.groupPicUrl),
+                      ),
+                      color:
+                          widget.isWhite ? Colors.teal[700] : Colors.teal[900],
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+          ),
+          SizedBox(
+            width: 10,
+          ),
+          InkWell(
+            onTap: () {
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => GroupChatScreen(
+                            groupId: widget.groupId,
+                            groupName: widget.groupName,
+                            groupPicUrl: widget.groupPicUrl,
+                            blackbg: widget.blackbg,
+                            whitebg: widget.whitebg,
+                            isWhite: widget.isWhite,
+                            receivedBy: widget.receivedBy,
+                          )));
+            },
+            child: Container(
+              width: MediaQuery.of(context).size.width - 80,
+              height: 40,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.groupName,
+                    style: TextStyle(
+                      color: widget.isWhite ? Colors.black87 : Colors.white,
+                      fontSize: 19,
+                      //fontWeight: FontWeight.w600
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )
+        ],
+      ),
+    );
   }
 }
 

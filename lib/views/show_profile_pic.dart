@@ -54,6 +54,7 @@ class ShowProfilePic extends StatelessWidget {
                                   builder: (context) => ShowImage(
                                         imageUrl: imageUrl,
                                         appBarText: username,
+                                        tag: username,
                                       )));
                         },
                         child: Container(

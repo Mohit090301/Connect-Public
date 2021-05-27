@@ -1,54 +1,45 @@
-import 'dart:io';
+import 'dart:math';
+
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:date_time_format/date_time_format.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/painting.dart';
 import 'package:flutter_chat_app/helper/constants.dart';
 import 'package:flutter_chat_app/services/database.dart';
+import 'package:flutter_chat_app/views/group_info.dart';
 import 'package:flutter_chat_app/views/show_image.dart';
-import 'package:flutter_chat_app/views/show_profile_pic.dart';
-import 'package:flutter_chat_app/views/unique_profilepic.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
-import 'dart:math';
-import 'package:flutter_string_encryption/flutter_string_encryption.dart';
+import 'dart:io';
 
-class ConversationScreen extends StatefulWidget {
-  final cryptor = new PlatformStringCryptor();
-  final String username;
-  final String chatRoomId;
-  final String imageUrl;
-  final String mailid;
-  final bool isLastMsgSeen;
-  final bool isWhite;
-  String myUrl;
-  final String blackbg;
+class GroupChatScreen extends StatefulWidget {
+  final String groupId;
   final String whitebg;
+  final String blackbg;
+  final String groupName;
+  String groupPicUrl;
+  final bool isWhite;
+  final List<dynamic> receivedBy;
 
-  ConversationScreen(
-      {this.username,
-      this.chatRoomId,
-      this.imageUrl,
-      this.mailid,
-      this.isLastMsgSeen,
+  GroupChatScreen(
+      {this.groupId,
+      this.groupName,
       this.isWhite,
-      this.myUrl,
       this.blackbg,
-      this.whitebg});
+      this.whitebg,
+      this.groupPicUrl,
+      this.receivedBy});
 
   @override
-  _ConversationScreenState createState() => _ConversationScreenState();
+  _GroupChatScreenState createState() => _GroupChatScreenState();
 }
 
-class _ConversationScreenState extends State<ConversationScreen>
-    with WidgetsBindingObserver {
-  DataBaseMethods dataBaseMethods = new DataBaseMethods();
+class _GroupChatScreenState extends State<GroupChatScreen> {
   TextEditingController messageController = new TextEditingController();
-  Stream chatMessageStream, statusStream;
+  DataBaseMethods dataBaseMethods = new DataBaseMethods();
   final dateTime = DateTime.now();
+  Stream chatMessageStream;
   AppLifecycleState state;
   String userStatus = "";
   String lastMessage = "";
@@ -64,6 +55,7 @@ class _ConversationScreenState extends State<ConversationScreen>
   bool loading = false;
 
   Widget ChatMessageList() {
+    print(widget.receivedBy);
     print("called chat message list");
     return StreamBuilder(
       stream: chatMessageStream,
@@ -76,9 +68,6 @@ class _ConversationScreenState extends State<ConversationScreen>
           lastMessagetime = snapshot.data.docs[0].data()["msgTime"];
           sendBy = snapshot.data.docs[0].data()["sendBy"];
         }
-        if (sendBy == widget.username) {
-          setSeen();
-        }
         return snapshot.hasData && snapshot.data.docs.length >= 1
             ? Container(
                 padding: EdgeInsets.only(bottom: 58),
@@ -87,13 +76,11 @@ class _ConversationScreenState extends State<ConversationScreen>
                   reverse: true,
                   itemCount: snapshot.data.docs.length,
                   itemBuilder: (context, index) {
-                    // final decrypted = encrypter.decrypt(encrypted, iv: iv);
-                    //print("Decrypting - $decrypted");
-                    // widget.message = decrypted.toString();
                     return MessageTile(
                       message: snapshot.data.docs[index].data()["message"],
                       isSendByMe: snapshot.data.docs[index].data()["sendBy"] ==
                           Constants.myName,
+                      sendBy: snapshot.data.docs[index].data()["sendBy"],
                       isNextMsgSendByMe: index > 0
                           ? snapshot.data.docs[index - 1].data()["sendBy"] ==
                               Constants.myName
@@ -111,10 +98,11 @@ class _ConversationScreenState extends State<ConversationScreen>
                           : "",
                       isLastMessageSeen:
                           isLastMsgSeen == null ? false : isLastMsgSeen,
-                      username: widget.username,
-                      chatRoomId: widget.chatRoomId,
+                      groupName: widget.groupName,
+                      //chatRoomId: widget.chatRoomId,
                       isWhite: widget.isWhite,
                       isImage: snapshot.data.docs[index].data()["isImage"],
+                      receivedBy: widget.receivedBy,
                     );
                   },
                 ),
@@ -124,83 +112,25 @@ class _ConversationScreenState extends State<ConversationScreen>
     );
   }
 
-  find() async {
-    await FirebaseFirestore.instance
-        .collection("ChatRoom")
-        .doc(widget.chatRoomId)
-        .get()
-        .then((val) {
-      isLastMsgSeen = val.data()["seen"];
-      print(isLastMsgSeen);
-    });
-  }
-
+  @override
   sendMessage() async {
     print("send messsage called");
+    List<String> receivedBy;
+
     if (messageController.text.isNotEmpty) {
       int timeStamp = DateTime.now().millisecondsSinceEpoch;
       Map<String, dynamic> messageMap = {
         "message": messageController.text,
         "sendBy": Constants.myName,
+        "receivedBy": widget.receivedBy,
         "time": timeStamp,
         "msgTime": DateFormat.jm().format(DateTime.now()),
         "msgDate": DateTimeFormat.format(dateTime),
-        "receivedBy": widget.username,
+        "groupName": widget.groupName
       };
-      Map<String, dynamic> chatRoomMap = {
-        "lastMsgTimeStamp": timeStamp,
-        "lastMsgTime": DateFormat.jm().format(DateTime.now()).toString(),
-        "lastMsg": messageController.text,
-        "SendBy": Constants.myName,
-        "seen": false,
-      };
+
       messageController.text = "";
-      await dataBaseMethods.addConversationMessages(
-          widget.chatRoomId, messageMap);
-      await dataBaseMethods.updateChatRoom(widget.chatRoomId, chatRoomMap);
-      setTypingStatus("");
-    }
-  }
-
-  @override
-  void initState() {
-    print("init state called");
-    dataBaseMethods.getUserByUsername(widget.username).then((value) {
-      useremail = value.docs[0].data()['email'];
-    });
-
-    dataBaseMethods.getConversationMessages(widget.chatRoomId).then((value) {
-      setState(() {
-        chatMessageStream = value;
-      });
-    });
-
-    WidgetsBinding.instance.addObserver(this);
-    dataBaseMethods.getUserStatus(widget.username).then((value) {
-      setState(() {
-        statusStream = value;
-      });
-    });
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  void setSeen() async {
-    await dataBaseMethods.updateLastMsgSeen(widget.chatRoomId);
-  }
-
-  void setTypingStatus(String text) async {
-    print("set typing status called");
-    if (text != "") {
-      Map<String, String> statusMap = {"TypingTo": widget.username};
-      await dataBaseMethods.setTypingStatus(statusMap);
-    } else {
-      Map<String, String> statusMap = {"TypingTo": "NoOne"};
-      await dataBaseMethods.setTypingStatus(statusMap);
+      await dataBaseMethods.addGroupMessages(widget.groupId, messageMap);
     }
   }
 
@@ -236,7 +166,7 @@ class _ConversationScreenState extends State<ConversationScreen>
     print(imageName);
     var snapshot = await FirebaseStorage.instance
         .ref()
-        .child(widget.chatRoomId + "." + Constants.myName + imageName)
+        .child(widget.groupName + "." + Constants.myName + imageName)
         .putFile(image)
         .whenComplete(() {
       print("complete");
@@ -250,26 +180,29 @@ class _ConversationScreenState extends State<ConversationScreen>
       "time": timeStamp,
       "msgTime": DateFormat.jm().format(DateTime.now()),
       "msgDate": DateTimeFormat.format(dateTime),
-      "receivedBy": widget.username,
       "isImage": true,
+      "receivedBy": widget.receivedBy,
+      "groupName": widget.groupName
     };
-    Map<String, dynamic> chatRoomMap = {
-      "lastMsgTimeStamp": timeStamp,
-      "lastMsgTime": DateFormat.jm().format(DateTime.now()).toString(),
-      "lastMsg": "Image",
-      "SendBy": Constants.myName,
-      "seen": false,
-      "isImage": true
-    };
-    await dataBaseMethods.addConversationMessages(
-        widget.chatRoomId, messageMap);
-    await dataBaseMethods.updateChatRoom(widget.chatRoomId, chatRoomMap);
+
+    await dataBaseMethods.addGroupMessages(widget.groupId, messageMap);
+
     setState(() {
       loading = false;
     });
   }
 
   @override
+  void initState() {
+    dataBaseMethods.getGroupMessages(widget.groupId).then((value) {
+      setState(() {
+        print(value.toString() + " .... ");
+        chatMessageStream = value;
+      });
+    });
+    super.initState();
+  }
+
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: widget.isWhite ? Colors.grey[100] : Colors.black45,
@@ -281,12 +214,17 @@ class _ConversationScreenState extends State<ConversationScreen>
             Navigator.push(
                 context,
                 MaterialPageRoute(
-                    builder: (context) => ShowProfilePic(
-                          username: widget.username,
-                          mail: useremail,
-                          imageUrl: widget.imageUrl,
-                          isWhite: widget.isWhite,
-                        )));
+                    builder: (context) => GroupInfo(
+                      groupName: widget.groupName,
+                      users: widget.receivedBy,
+                      isWhite: widget.isWhite,
+                      groupId: widget.groupId,
+                      groupPicUrl: widget.groupPicUrl,
+                    ))).then((value) {
+                      setState(() {
+                        widget.groupPicUrl = value;
+                      });
+            });
           },
           child: Row(
             mainAxisAlignment: MainAxisAlignment.start,
@@ -298,9 +236,10 @@ class _ConversationScreenState extends State<ConversationScreen>
                 decoration: BoxDecoration(
                   image: DecorationImage(
                     fit: BoxFit.cover,
-                    image: widget.imageUrl != null && widget.imageUrl != ""
-                        ? CachedNetworkImageProvider(widget.imageUrl)
-                        : AssetImage('assets/empty_profile.png'),
+                    image:
+                        widget.groupPicUrl != null && widget.groupPicUrl != ""
+                            ? CachedNetworkImageProvider(widget.groupPicUrl)
+                            : AssetImage('assets/empty_profile.png'),
                   ),
                   color: Colors.teal[900],
                   borderRadius: BorderRadius.circular(10),
@@ -312,7 +251,7 @@ class _ConversationScreenState extends State<ConversationScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      widget.username,
+                      widget.groupName,
                       style: TextStyle(
                           color: Colors.white,
                           fontSize: 22,
@@ -321,35 +260,6 @@ class _ConversationScreenState extends State<ConversationScreen>
                     SizedBox(
                       height: 1,
                     ),
-                    StreamBuilder(
-                        stream: statusStream,
-                        builder: (context, snapshot) {
-                          if (sendBy == widget.username) {
-                            setSeen();
-                          }
-                          return Container(
-                            width: MediaQuery.of(context).size.width / 2,
-                            child: Text(
-                              snapshot.hasData && snapshot.data.docs.length >= 2
-                                  ? snapshot.data.docs[1].data()["status"] ==
-                                          "online"
-                                      ? snapshot.data.docs[0]
-                                                  .data()["TypingTo"] ==
-                                              Constants.myName
-                                          ? "Typing..."
-                                          : "online"
-                                      : snapshot.data.docs[1].data()["status"]
-                                  : snapshot.hasData &&
-                                          snapshot.data.docs.length >= 1
-                                      ? snapshot.data.docs[0].data()["status"]
-                                      : "",
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w400),
-                            ),
-                          );
-                        }),
                   ],
                 ),
               ),
@@ -357,35 +267,6 @@ class _ConversationScreenState extends State<ConversationScreen>
           ),
         ),
         brightness: Brightness.dark,
-        actions: [
-          GestureDetector(
-            onTap: () {
-              Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => UniqueProfilePic(
-                          isWhite: widget.isWhite,
-                          chatRoomId: widget.chatRoomId,
-                          myUrl: widget.myUrl))).then((val) {
-                FirebaseFirestore.instance
-                    .collection("ChatRoom")
-                    .doc(widget.chatRoomId)
-                    .get()
-                    .then((value) {
-                  widget.myUrl = value["users"][0] == Constants.myName
-                      ? value["profilePicUrl"][0]
-                      : value["profilePicUrl"][1];
-                });
-              });
-            },
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 10),
-              child: Icon(
-                Icons.person_outline,
-              ),
-            ),
-          ),
-        ],
       ),
       body: WillPopScope(
         onWillPop: () async {
@@ -432,7 +313,7 @@ class _ConversationScreenState extends State<ConversationScreen>
                           Expanded(
                             child: TextField(
                               onChanged: (String s) async {
-                                await setTypingStatus(s);
+                                //await setTypingStatus(s);
                               },
                               keyboardType: TextInputType.multiline,
                               maxLines: null,
@@ -531,6 +412,7 @@ class _ConversationScreenState extends State<ConversationScreen>
 class MessageTile extends StatefulWidget {
   final String message;
   final bool isSendByMe;
+  final String sendBy;
   final bool isNextMsgSendByMe;
   final String msgTime;
   final String lastMsg;
@@ -538,12 +420,11 @@ class MessageTile extends StatefulWidget {
   String compare = "";
   String compareMsg = "";
   bool isLastMessageSeen;
-  String username;
-  String chatRoomId;
   bool isWhite;
   DateTime diffDate;
   bool isImage;
-
+  String groupName;
+  List<dynamic> receivedBy;
   MessageTile(
       {this.message,
       this.isSendByMe,
@@ -553,11 +434,13 @@ class MessageTile extends StatefulWidget {
       this.compare,
       this.compareMsg,
       this.isLastMessageSeen,
-      this.username,
-      this.chatRoomId,
       this.isWhite,
       this.isNextMsgSendByMe,
-      this.isImage}) {
+      this.isImage,
+      this.groupName,
+      this.sendBy,
+      this.receivedBy}) {
+
     print("Message Tile called");
     if (compare != null && compare != "") {
       compare = compare.substring(0, 10);
@@ -577,31 +460,23 @@ class MessageTile extends StatefulWidget {
 class _MessageTileState extends State<MessageTile> {
   Stream chatMessageStream;
   DataBaseMethods dataBaseMethods = new DataBaseMethods();
-
+  Map<String, Color> uniqueColor = {"Mohit Mundra" : Colors.deepOrangeAccent, "Prachii" : Colors.amberAccent, "Sansku Modi": Colors.blue[400], "manav": Colors.lightGreenAccent};
+  int i = 0;
   @override
   void initState() {
+    List<Color> col = [Colors.black, Colors.yellowAccent, Colors.red, Colors.blue];
+
     //decryptMsg(widget.message);
     dataBaseMethods.getLastMessageSeen().then((value) {
       setState(() {
         chatMessageStream = value;
       });
     });
+
     super.initState();
   }
 
-  void findSeen() async {
-    await FirebaseFirestore.instance
-        .collection("ChatRoom")
-        .doc(widget.chatRoomId)
-        .get()
-        .then((val) {
-      widget.isLastMessageSeen = val.data()["seen"];
-      if (mounted)
-        setState(() {
-          chatMessageStream = null;
-        });
-    });
-  }
+  void findSeen() async {}
 
   void didChangeAppLifecycleState(AppLifecycleState state) async {
     print("did change app life cycle called");
@@ -619,7 +494,6 @@ class _MessageTileState extends State<MessageTile> {
         .reversed
         .join('-');
     int diff = DateTime.now().difference(widget.diffDate).inDays;
-    String replyMsg;
     return Column(
       children: [
         Column(
@@ -690,7 +564,6 @@ class _MessageTileState extends State<MessageTile> {
           padding: EdgeInsets.only(
               left: widget.isSendByMe ? 80 : 0,
               right: widget.isSendByMe ? 0 : 80),
-          //margin: EdgeInsets.symmetric(vertical: widget.isNextMsgSendByMe == widget.isSendByMe ? 1 : 4),
           alignment:
               widget.isSendByMe ? Alignment.centerRight : Alignment.centerLeft,
           child: Column(
@@ -698,42 +571,33 @@ class _MessageTileState extends State<MessageTile> {
               Container(
                 padding: EdgeInsets.symmetric(
                     horizontal:
-                        widget.isImage != null && widget.isImage ? 0 : 10,
-                    vertical: 7),
+                        widget.isImage != null && widget.isImage ? 5 : 10,
+                    vertical: widget.isImage != null && widget.isImage ? 5 : 7),
                 decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: widget.isWhite
-                          ? widget.isSendByMe
-                              ? widget.isImage == null || !widget.isImage
-                                  ? [
-                                      Colors.teal[600].withOpacity(0.6),
-                                      Colors.teal[600].withOpacity(0.8),
-                                      Colors.teal[600].withOpacity(0.95)
-                                    ]
-                                  : [Colors.transparent, Colors.transparent]
-                              : widget.isImage == null || !widget.isImage
-                                  ? [
-                                      Colors.grey[800].withOpacity(0.95),
-                                      Colors.grey[800].withOpacity(0.8),
-                                      Colors.grey[800].withOpacity(0.5)
-                                    ]
-                                  : [Colors.transparent, Colors.transparent]
-                          : widget.isSendByMe
-                              ? widget.isImage == null || !widget.isImage
-                                  ? [
-                                      Colors.teal[600].withOpacity(0.15),
-                                      Colors.teal[600].withOpacity(0.53),
-                                      Colors.teal[600].withOpacity(0.8)
-                                    ]
-                                  : [Colors.transparent, Colors.transparent]
-                              : widget.isImage == null || !widget.isImage
-                                  ? [
-                                      Colors.grey[800].withOpacity(0.85),
-                                      Colors.grey[800].withOpacity(0.53),
-                                      Colors.grey[800].withOpacity(0.15)
-                                    ]
-                                  : [Colors.transparent, Colors.transparent],
-                    ),
+                        colors: widget.isWhite
+                            ? widget.isSendByMe
+                                ? [
+                                    Colors.teal[600].withOpacity(0.6),
+                                    Colors.teal[600].withOpacity(0.8),
+                                    Colors.teal[600].withOpacity(0.95)
+                                  ]
+                                : [
+                                    Colors.grey[800].withOpacity(0.95),
+                                    Colors.grey[800].withOpacity(0.8),
+                                    Colors.grey[800].withOpacity(0.5)
+                                  ]
+                            : widget.isSendByMe
+                                ? [
+                                    Colors.teal[600].withOpacity(0.15),
+                                    Colors.teal[600].withOpacity(0.53),
+                                    Colors.teal[600].withOpacity(0.8)
+                                  ]
+                                : [
+                                    Colors.grey[800].withOpacity(0.85),
+                                    Colors.grey[800].withOpacity(0.53),
+                                    Colors.grey[800].withOpacity(0.15)
+                                  ]),
                     borderRadius: widget.isSendByMe
                         ? BorderRadius.only(
                             topLeft: Radius.circular(15),
@@ -746,8 +610,22 @@ class _MessageTileState extends State<MessageTile> {
                             bottomRight: Radius.circular(15),
                           )),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
+                  crossAxisAlignment: widget.isSendByMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
                   children: [
+                    !widget.isSendByMe
+                        ? Container(
+                            padding: EdgeInsets.symmetric(vertical: 2),
+                            child: Text(widget.sendBy,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  color: uniqueColor[widget.sendBy] == null ? Colors.pink : uniqueColor[widget.sendBy],
+                                  letterSpacing: 0.3,
+                                )),
+                          )
+                        : Container(
+                            height: 0,
+                            width: 0,
+                          ),
                     widget.isImage == null || !widget.isImage
                         ? SelectableText(
                             widget.message != null ? widget.message : "NUll",
@@ -767,7 +645,7 @@ class _MessageTileState extends State<MessageTile> {
                                             imageUrl: widget.message,
                                             appBarText: widget.isSendByMe
                                                 ? "You"
-                                                : widget.username,
+                                                : widget.groupName,
                                             tag: widget.message,
                                           )));
                             },
@@ -807,7 +685,7 @@ class _MessageTileState extends State<MessageTile> {
                               if (!widget.isLastMessageSeen) findSeen();
                               return Container(
                                 width:
-                                    widget.message == widget.lastMsg ? 70 : 57,
+                                    widget.message == widget.lastMsg ? 57 : 57,
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.end,
                                   children: [
@@ -823,20 +701,6 @@ class _MessageTileState extends State<MessageTile> {
                                     ),
                                     SizedBox(
                                       width: 3,
-                                    ),
-                                    Icon(
-                                      CupertinoIcons.eye_fill,
-                                      color: widget.isLastMessageSeen &&
-                                              widget.isSendByMe &&
-                                              widget.message == widget.lastMsg
-                                          ? Colors.yellow
-                                          : widget.isImage == null ||
-                                                  !widget.isImage
-                                              ? Colors.black
-                                              : Colors.white,
-                                      size: widget.message == widget.lastMsg
-                                          ? 13
-                                          : 0,
                                     ),
                                   ],
                                 ),
@@ -854,11 +718,4 @@ class _MessageTileState extends State<MessageTile> {
       ],
     );
   }
-}
-
-getChatRoomId(String a, String b) {
-  if (a.substring(0, 1).codeUnitAt(0) > b.substring(0, 1).codeUnitAt(0))
-    return b + "*" + a;
-  else
-    return a + "*" + b;
 }

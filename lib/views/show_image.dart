@@ -5,14 +5,12 @@ import 'package:photo_view/photo_view.dart';
 class ShowImage extends StatelessWidget {
   final String imageUrl;
   String appBarText = "";
-
-  ShowImage({this.imageUrl, this.appBarText});
+  String tag;
+  ShowImage({this.imageUrl, this.appBarText, this.tag});
 
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
-
         backgroundColor: Colors.black,
         appBar: AppBar(
           backgroundColor: Colors.black12,

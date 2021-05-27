@@ -5,6 +5,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_chat_app/helper/constants.dart';
 import 'package:flutter_chat_app/services/database.dart';
+import 'package:flutter_chat_app/views/show_image.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
@@ -215,7 +216,30 @@ class _UniqueProfilePicState extends State<UniqueProfilePic> {
               ),
             ),
             SizedBox(
-              height: 30,
+              height: 5,
+            ),
+            Center(
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => ShowImage(
+                            imageUrl: imageUrl,
+                            appBarText: Constants.myName,
+                            tag: username,
+                          )));
+                },
+                child: Text(
+                  "View Unique Profile Photo",
+                  style: TextStyle(
+                      color: widget.isWhite
+                          ? Colors.blue[700]
+                          : Colors.lightBlue,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w500),
+                ),
+              ),
             ),
             Divider(
               thickness: 0.5,
