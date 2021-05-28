@@ -11,10 +11,12 @@ import 'package:flutter_chat_app/services/database.dart';
 import 'package:flutter_chat_app/views/show_image.dart';
 import 'package:flutter_chat_app/views/show_profile_pic.dart';
 import 'package:flutter_chat_app/views/unique_profilepic.dart';
+import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'dart:math';
 import 'package:flutter_string_encryption/flutter_string_encryption.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ConversationScreen extends StatefulWidget {
   final cryptor = new PlatformStringCryptor();
@@ -610,6 +612,14 @@ class _MessageTileState extends State<MessageTile> {
     }
   }
 
+  Future<void> launchInBrowser(String url) async {
+    if (await canLaunch(url)) {
+      await launch(url);
+    } else {
+      throw 'Could not launch $url';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     String todaysDate = DateTimeFormat.format(DateTime.now())
@@ -749,15 +759,34 @@ class _MessageTileState extends State<MessageTile> {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     widget.isImage == null || !widget.isImage
-                        ? SelectableText(
-                            widget.message != null ? widget.message : "NUll",
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 17,
-                            ),
-                            textAlign: TextAlign.start,
-                            enableInteractiveSelection: true,
-                          )
+                        ? widget.message != null &&
+                                widget.message.length <= 10 ||
+                                !widget.message.contains("https://", 0)
+                            ? SelectableText(
+                                widget.message,
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 17,
+                                ),
+                                textAlign: TextAlign.start,
+                                enableInteractiveSelection: true,
+                              )
+                            : InkWell(
+                                onTap: () async {
+                                    launch(widget.message);
+                                },
+                                child: Container(
+                                  child: Text(
+                                    widget.message,
+                                    style: TextStyle(
+                                      color: Colors.blue,
+                                      decoration: TextDecoration.underline,
+                                      fontSize: 17,
+                                    ),
+                                    textAlign: TextAlign.start,
+                                  ),
+                                ),
+                              )
                         : InkWell(
                             onTap: () {
                               Navigator.push(

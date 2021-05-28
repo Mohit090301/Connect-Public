@@ -13,6 +13,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'dart:io';
 
+import 'package:url_launcher/url_launcher.dart';
+
 class GroupChatScreen extends StatefulWidget {
   final String groupId;
   final String whitebg;
@@ -215,15 +217,15 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                 context,
                 MaterialPageRoute(
                     builder: (context) => GroupInfo(
-                      groupName: widget.groupName,
-                      users: widget.receivedBy,
-                      isWhite: widget.isWhite,
-                      groupId: widget.groupId,
-                      groupPicUrl: widget.groupPicUrl,
-                    ))).then((value) {
-                      setState(() {
-                        widget.groupPicUrl = value;
-                      });
+                          groupName: widget.groupName,
+                          users: widget.receivedBy,
+                          isWhite: widget.isWhite,
+                          groupId: widget.groupId,
+                          groupPicUrl: widget.groupPicUrl,
+                        ))).then((value) {
+              setState(() {
+                widget.groupPicUrl = value;
+              });
             });
           },
           child: Row(
@@ -425,6 +427,7 @@ class MessageTile extends StatefulWidget {
   bool isImage;
   String groupName;
   List<dynamic> receivedBy;
+
   MessageTile(
       {this.message,
       this.isSendByMe,
@@ -440,7 +443,6 @@ class MessageTile extends StatefulWidget {
       this.groupName,
       this.sendBy,
       this.receivedBy}) {
-
     print("Message Tile called");
     if (compare != null && compare != "") {
       compare = compare.substring(0, 10);
@@ -460,11 +462,23 @@ class MessageTile extends StatefulWidget {
 class _MessageTileState extends State<MessageTile> {
   Stream chatMessageStream;
   DataBaseMethods dataBaseMethods = new DataBaseMethods();
-  Map<String, Color> uniqueColor = {"Mohit Mundra" : Colors.deepOrangeAccent, "Prachii" : Colors.amberAccent, "Sansku Modi": Colors.blue[400], "manav": Colors.lightGreenAccent};
+  Map<String, Color> uniqueColor = {
+    "Mohit Mundra": Colors.deepOrangeAccent,
+    "Prachii": Colors.amberAccent,
+    "Sansku Modi": Colors.blue[400],
+    "manav": Colors.lightGreenAccent,
+    "prashant": Colors.blue[400]
+  };
   int i = 0;
+
   @override
   void initState() {
-    List<Color> col = [Colors.black, Colors.yellowAccent, Colors.red, Colors.blue];
+    List<Color> col = [
+      Colors.black,
+      Colors.yellowAccent,
+      Colors.red,
+      Colors.blue
+    ];
 
     //decryptMsg(widget.message);
     dataBaseMethods.getLastMessageSeen().then((value) {
@@ -610,7 +624,9 @@ class _MessageTileState extends State<MessageTile> {
                             bottomRight: Radius.circular(15),
                           )),
                 child: Column(
-                  crossAxisAlignment: widget.isSendByMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                  crossAxisAlignment: widget.isSendByMe
+                      ? CrossAxisAlignment.end
+                      : CrossAxisAlignment.start,
                   children: [
                     !widget.isSendByMe
                         ? Container(
@@ -618,7 +634,9 @@ class _MessageTileState extends State<MessageTile> {
                             child: Text(widget.sendBy,
                                 style: TextStyle(
                                   fontWeight: FontWeight.w800,
-                                  color: uniqueColor[widget.sendBy] == null ? Colors.pink : uniqueColor[widget.sendBy],
+                                  color: uniqueColor[widget.sendBy] == null
+                                      ? Colors.pink
+                                      : uniqueColor[widget.sendBy],
                                   letterSpacing: 0.3,
                                 )),
                           )
@@ -627,15 +645,35 @@ class _MessageTileState extends State<MessageTile> {
                             width: 0,
                           ),
                     widget.isImage == null || !widget.isImage
-                        ? SelectableText(
-                            widget.message != null ? widget.message : "NUll",
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 17,
-                            ),
-                            textAlign: TextAlign.start,
-                            enableInteractiveSelection: true,
-                          )
+                        ? widget.message.length <= 10 ||
+                                !widget.message.contains("https://", 0)
+                            ? SelectableText(
+                                widget.message != null
+                                    ? widget.message
+                                    : "NUll",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 17,
+                                ),
+                                textAlign: TextAlign.start,
+                                enableInteractiveSelection: true,
+                              )
+                            : InkWell(
+                                onTap: () async {
+                                  launch(widget.message);
+                                },
+                                child: Container(
+                                  child: Text(
+                                    widget.message,
+                                    style: TextStyle(
+                                      color: Colors.blue,
+                                      decoration: TextDecoration.underline,
+                                      fontSize: 17,
+                                    ),
+                                    textAlign: TextAlign.start,
+                                  ),
+                                ),
+                              )
                         : InkWell(
                             onTap: () {
                               Navigator.push(
