@@ -8,18 +8,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter_chat_app/helper/constants.dart';
 import 'package:flutter_chat_app/services/database.dart';
+import 'package:flutter_chat_app/views/play_video.dart';
 import 'package:flutter_chat_app/views/show_image.dart';
 import 'package:flutter_chat_app/views/show_profile_pic.dart';
 import 'package:flutter_chat_app/views/unique_profilepic.dart';
-import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'dart:math';
-import 'package:flutter_string_encryption/flutter_string_encryption.dart';
+import 'package:assets_audio_player/assets_audio_player.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+IconData msgIcon;
+
 class ConversationScreen extends StatefulWidget {
-  final cryptor = new PlatformStringCryptor();
   final String username;
   final String chatRoomId;
   final String imageUrl;
@@ -29,6 +30,7 @@ class ConversationScreen extends StatefulWidget {
   String myUrl;
   final String blackbg;
   final String whitebg;
+  final isSoundEnabled;
 
   ConversationScreen(
       {this.username,
@@ -39,7 +41,8 @@ class ConversationScreen extends StatefulWidget {
       this.isWhite,
       this.myUrl,
       this.blackbg,
-      this.whitebg});
+      this.whitebg,
+      this.isSoundEnabled});
 
   @override
   _ConversationScreenState createState() => _ConversationScreenState();
@@ -66,7 +69,6 @@ class _ConversationScreenState extends State<ConversationScreen>
   bool loading = false;
 
   Widget ChatMessageList() {
-    print("called chat message list");
     return StreamBuilder(
       stream: chatMessageStream,
       builder: (context, snapshot) {
@@ -89,35 +91,33 @@ class _ConversationScreenState extends State<ConversationScreen>
                   reverse: true,
                   itemCount: snapshot.data.docs.length,
                   itemBuilder: (context, index) {
-                    // final decrypted = encrypter.decrypt(encrypted, iv: iv);
-                    //print("Decrypting - $decrypted");
-                    // widget.message = decrypted.toString();
                     return MessageTile(
-                      message: snapshot.data.docs[index].data()["message"],
-                      isSendByMe: snapshot.data.docs[index].data()["sendBy"] ==
-                          Constants.myName,
-                      isNextMsgSendByMe: index > 0
-                          ? snapshot.data.docs[index - 1].data()["sendBy"] ==
-                              Constants.myName
-                          : false,
-                      msgTime: snapshot.data.docs[index].data()["msgTime"],
-                      lastMsg: snapshot.data.docs[0].data()["message"],
-                      lastMsgDate: snapshot.data.docs.length >= 1
-                          ? snapshot.data.docs[index].data()["msgDate"]
-                          : "",
-                      compare: index < snapshot.data.docs.length - 1
-                          ? snapshot.data.docs[index + 1].data()["msgDate"]
-                          : "",
-                      compareMsg: index < snapshot.data.docs.length - 1
-                          ? snapshot.data.docs[index + 1].data()["message"]
-                          : "",
-                      isLastMessageSeen:
-                          isLastMsgSeen == null ? false : isLastMsgSeen,
-                      username: widget.username,
-                      chatRoomId: widget.chatRoomId,
-                      isWhite: widget.isWhite,
-                      isImage: snapshot.data.docs[index].data()["isImage"],
-                    );
+                        message: snapshot.data.docs[index].data()["message"],
+                        isSendByMe:
+                            snapshot.data.docs[index].data()["sendBy"] ==
+                                Constants.myName,
+                        isNextMsgSendByMe: index > 0
+                            ? snapshot.data.docs[index - 1].data()["sendBy"] ==
+                                Constants.myName
+                            : false,
+                        msgTime: snapshot.data.docs[index].data()["msgTime"],
+                        lastMsg: snapshot.data.docs[0].data()["message"],
+                        lastMsgDate: snapshot.data.docs.length >= 1
+                            ? snapshot.data.docs[index].data()["msgDate"]
+                            : "",
+                        compare: index < snapshot.data.docs.length - 1
+                            ? snapshot.data.docs[index + 1].data()["msgDate"]
+                            : "",
+                        compareMsg: index < snapshot.data.docs.length - 1
+                            ? snapshot.data.docs[index + 1].data()["message"]
+                            : "",
+                        isLastMessageSeen:
+                            isLastMsgSeen == null ? false : isLastMsgSeen,
+                        username: widget.username,
+                        chatRoomId: widget.chatRoomId,
+                        isWhite: widget.isWhite,
+                        isImage: snapshot.data.docs[index].data()["isImage"],
+                        isVideo: snapshot.data.docs[index].data()["isVideo"]);
                   },
                 ),
               )
@@ -133,13 +133,20 @@ class _ConversationScreenState extends State<ConversationScreen>
         .get()
         .then((val) {
       isLastMsgSeen = val.data()["seen"];
-      print(isLastMsgSeen);
     });
   }
 
   sendMessage() async {
-    print("send messsage called");
     if (messageController.text.isNotEmpty) {
+      setState(() {
+        msgIcon = Icons.access_time_rounded;
+      });
+      if (widget.isSoundEnabled) {
+        await AssetsAudioPlayer.playAndForget(
+            Audio('assets/msg_sent_sound2.aac', playSpeed: 1.9),
+            volume: 1,
+            seek: Duration(seconds: 0));
+      }
       int timeStamp = DateTime.now().millisecondsSinceEpoch;
       Map<String, dynamic> messageMap = {
         "message": messageController.text,
@@ -148,6 +155,8 @@ class _ConversationScreenState extends State<ConversationScreen>
         "msgTime": DateFormat.jm().format(DateTime.now()),
         "msgDate": DateTimeFormat.format(dateTime),
         "receivedBy": widget.username,
+        "isImage": false,
+        "isVideo": false,
       };
       Map<String, dynamic> chatRoomMap = {
         "lastMsgTimeStamp": timeStamp,
@@ -155,18 +164,22 @@ class _ConversationScreenState extends State<ConversationScreen>
         "lastMsg": messageController.text,
         "SendBy": Constants.myName,
         "seen": false,
+        "isImage": false,
+        "isVideo": false,
       };
-      messageController.text = "";
+      messageController.clear();
       await dataBaseMethods.addConversationMessages(
           widget.chatRoomId, messageMap);
       await dataBaseMethods.updateChatRoom(widget.chatRoomId, chatRoomMap);
-      setTypingStatus("");
+      setState(() {
+        msgIcon = CupertinoIcons.eye_fill;
+      });
+      await setTypingStatus("");
     }
   }
 
   @override
   void initState() {
-    print("init state called");
     dataBaseMethods.getUserByUsername(widget.username).then((value) {
       useremail = value.docs[0].data()['email'];
     });
@@ -196,7 +209,6 @@ class _ConversationScreenState extends State<ConversationScreen>
   }
 
   void setTypingStatus(String text) async {
-    print("set typing status called");
     if (text != "") {
       Map<String, String> statusMap = {"TypingTo": widget.username};
       await dataBaseMethods.setTypingStatus(statusMap);
@@ -208,27 +220,27 @@ class _ConversationScreenState extends State<ConversationScreen>
 
   Future pickImageGallery(context) async {
     final pickedFile =
-        await picker.getImage(source: ImageSource.gallery, imageQuality: 50);
+        await picker.getImage(source: ImageSource.gallery, imageQuality: 100);
     if (pickedFile != null) {
       image = File(pickedFile.path);
-      uploadFile(context);
+      uploadFile(context, true, false);
       print("URL added");
     }
     setState(() {});
   }
 
-  Future pickImageCamera(context) async {
-    final pickedFile =
-        await picker.getImage(source: ImageSource.camera, imageQuality: 50);
+  Future pickVideoGallery(context) async {
+    final pickedFile = await picker.getVideo(
+        source: ImageSource.gallery, maxDuration: Duration(seconds: 30));
     if (pickedFile != null) {
       image = File(pickedFile.path);
-      uploadFile(context);
+      uploadFile(context, false, true);
       print("URL added");
     }
     setState(() {});
   }
 
-  Future uploadFile(context) async {
+  Future uploadFile(context, bool isImage, bool isVideo) async {
     setState(() {
       loading = true;
     });
@@ -253,7 +265,8 @@ class _ConversationScreenState extends State<ConversationScreen>
       "msgTime": DateFormat.jm().format(DateTime.now()),
       "msgDate": DateTimeFormat.format(dateTime),
       "receivedBy": widget.username,
-      "isImage": true,
+      "isImage": isImage,
+      "isVideo": isVideo,
     };
     Map<String, dynamic> chatRoomMap = {
       "lastMsgTimeStamp": timeStamp,
@@ -261,14 +274,27 @@ class _ConversationScreenState extends State<ConversationScreen>
       "lastMsg": "Image",
       "SendBy": Constants.myName,
       "seen": false,
-      "isImage": true
+      "isImage": isImage,
+      "isVideo": isVideo
     };
     await dataBaseMethods.addConversationMessages(
         widget.chatRoomId, messageMap);
     await dataBaseMethods.updateChatRoom(widget.chatRoomId, chatRoomMap);
     setState(() {
       loading = false;
+      msgIcon = Icons.access_time_rounded;
     });
+    if (widget.isSoundEnabled) {
+      await AssetsAudioPlayer.playAndForget(
+          Audio('assets/msg_sent_sound2.aac', playSpeed: 1.9),
+          volume: 1,
+          seek: Duration(seconds: 0));
+    }
+    await Future.delayed(Duration(seconds: 1));
+    setState(() {
+      msgIcon = CupertinoIcons.eye_fill;
+    });
+
   }
 
   @override
@@ -415,7 +441,7 @@ class _ConversationScreenState extends State<ConversationScreen>
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   SizedBox(
-                    height: MediaQuery.of(context).size.height - 95,
+                    height: MediaQuery.of(context).size.height * 0.88,
                   ),
                   Container(
                     // alignment: Alignment(0, 0.98),
@@ -433,6 +459,8 @@ class _ConversationScreenState extends State<ConversationScreen>
                         children: [
                           Expanded(
                             child: TextField(
+                              focusNode: FocusNode(),
+                              autofocus: false,
                               onChanged: (String s) async {
                                 await setTypingStatus(s);
                               },
@@ -454,15 +482,15 @@ class _ConversationScreenState extends State<ConversationScreen>
                           messageController.text == ""
                               ? GestureDetector(
                                   onTap: () {
-                                    pickImageCamera(context);
+                                    // TODO:Implement video player
                                   },
                                   child: Container(
-                                    padding: EdgeInsets.all(8),
-                                    height: 40,
+                                    padding: EdgeInsets.fromLTRB(0, 1, 0, 7),
+                                    height: 30,
                                     width: 30,
                                     child: Icon(
-                                      CupertinoIcons.camera_fill,
-                                      size: 25,
+                                      Icons.videocam,
+                                      size: 29,
                                       color: Colors.black,
                                     ),
                                   ),
@@ -544,7 +572,7 @@ class MessageTile extends StatefulWidget {
   String chatRoomId;
   bool isWhite;
   DateTime diffDate;
-  bool isImage;
+  bool isImage, isVideo;
 
   MessageTile(
       {this.message,
@@ -559,8 +587,8 @@ class MessageTile extends StatefulWidget {
       this.chatRoomId,
       this.isWhite,
       this.isNextMsgSendByMe,
-      this.isImage}) {
-    print("Message Tile called");
+      this.isImage,
+      this.isVideo}) {
     if (compare != null && compare != "") {
       compare = compare.substring(0, 10);
       compare = compare.split('-').reversed.join('-');
@@ -606,7 +634,6 @@ class _MessageTileState extends State<MessageTile> {
   }
 
   void didChangeAppLifecycleState(AppLifecycleState state) async {
-    print("did change app life cycle called");
     if (state == AppLifecycleState.resumed) {
       setState(() {});
     }
@@ -629,7 +656,6 @@ class _MessageTileState extends State<MessageTile> {
         .reversed
         .join('-');
     int diff = DateTime.now().difference(widget.diffDate).inDays;
-    String replyMsg;
     return Column(
       children: [
         Column(
@@ -758,9 +784,10 @@ class _MessageTileState extends State<MessageTile> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    widget.isImage == null || !widget.isImage
+                    (widget.isImage == null && widget.isVideo == null) ||
+                            (!widget.isImage && !widget.isVideo)
                         ? widget.message != null &&
-                                widget.message.length <= 10 ||
+                                    widget.message.length <= 10 ||
                                 !widget.message.contains("https://", 0)
                             ? SelectableText(
                                 widget.message,
@@ -773,7 +800,7 @@ class _MessageTileState extends State<MessageTile> {
                               )
                             : InkWell(
                                 onTap: () async {
-                                    launch(widget.message);
+                                  launch(widget.message);
                                 },
                                 child: Container(
                                   child: Text(
@@ -787,35 +814,67 @@ class _MessageTileState extends State<MessageTile> {
                                   ),
                                 ),
                               )
-                        : InkWell(
-                            onTap: () {
-                              Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (context) => ShowImage(
-                                            imageUrl: widget.message,
-                                            appBarText: widget.isSendByMe
-                                                ? "You"
-                                                : widget.username,
-                                            tag: widget.message,
-                                          )));
-                            },
-                            child: Container(
-                              height: 300,
-                              width: MediaQuery.of(context).size.width / 1.5,
-                              decoration: BoxDecoration(
-                                image: DecorationImage(
-                                  fit: BoxFit.cover,
-                                  image: CachedNetworkImageProvider(
-                                      widget.message),
+                        : widget.isVideo == null || !widget.isVideo
+                            ? InkWell(
+                                onTap: () {
+                                  Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (context) => ShowImage(
+                                                imageUrl: widget.message,
+                                                appBarText: widget.isSendByMe
+                                                    ? "You"
+                                                    : widget.username,
+                                                tag: widget.message,
+                                              )));
+                                },
+                                child: Container(
+                                  height: 300,
+                                  width:
+                                      MediaQuery.of(context).size.width / 1.5,
+                                  decoration: BoxDecoration(
+                                    image: DecorationImage(
+                                      fit: BoxFit.cover,
+                                      image: CachedNetworkImageProvider(
+                                          widget.message),
+                                    ),
+                                    color: widget.isWhite
+                                        ? Colors.transparent
+                                        : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
                                 ),
-                                color: widget.isWhite
-                                    ? Colors.transparent
-                                    : Colors.transparent,
-                                borderRadius: BorderRadius.circular(10),
+                              )
+                            : GestureDetector(
+                                onTap: () {
+                                  String videoLink = widget.message + ".mp4";
+                                  print(videoLink);
+                                  Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (context) => PlayVideo(videoLink: videoLink)));
+                                },
+                                child: Container(
+                                  width: 75,
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      Icon(
+                                        Icons.play_arrow,
+                                        color: Colors.white,
+                                      ),
+                                      Text(
+                                        "Video",
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ),
-                            ),
-                          ),
                     !widget.isSendByMe
                         ? Container(
                             child: Text(
@@ -854,7 +913,7 @@ class _MessageTileState extends State<MessageTile> {
                                       width: 3,
                                     ),
                                     Icon(
-                                      CupertinoIcons.eye_fill,
+                                      msgIcon,
                                       color: widget.isLastMessageSeen &&
                                               widget.isSendByMe &&
                                               widget.message == widget.lastMsg

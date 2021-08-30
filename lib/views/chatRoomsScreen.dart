@@ -44,6 +44,7 @@ class _ChatRoomState extends State<ChatRoom>
   String blackbg = "";
   String whitebg = "";
   TabController _controller;
+  bool isSoundEnabled;
 
   Widget ChatRoomList() {
     return StreamBuilder(
@@ -124,6 +125,7 @@ class _ChatRoomState extends State<ChatRoom>
                             blackbg: blackbg,
                             isImage:
                                 snapshot.data.docs[index].data()["isImage"],
+                            isSoundEnabled: isSoundEnabled,
                           );
                         },
                       )
@@ -167,6 +169,7 @@ class _ChatRoomState extends State<ChatRoom>
       getUserInfo();
     });
     getUserInfo();
+    isSoundEnabled = true;
     WidgetsBinding.instance.addObserver(this);
     super.initState();
   }
@@ -266,12 +269,15 @@ class _ChatRoomState extends State<ChatRoom>
                       MaterialPageRoute(
                           builder: (context) => settings(
                                 value: isWhite,
+                                isSoundEnabled: isSoundEnabled,
                               ))).then((value) {
                     if (mounted) {
+                      print(isSoundEnabled.toString() +  " sound");
                       setState(() {
                         isWhite = value[0];
                         whitebg = value[1] == "" ? whitebg : value[1];
                         blackbg = value[2] == "" ? blackbg : value[2];
+                        isSoundEnabled = value[3];
                       });
                     }
                   });
@@ -281,6 +287,7 @@ class _ChatRoomState extends State<ChatRoom>
                     child: Icon(
                       Icons.settings,
                       size: 21,
+                      semanticLabel: "Settings",
                     )),
               ),
               InkWell(
@@ -296,7 +303,10 @@ class _ChatRoomState extends State<ChatRoom>
                 },
                 child: Container(
                   padding: EdgeInsets.symmetric(horizontal: 5),
-                  child: Icon(Icons.search),
+                  child: Icon(
+                      Icons.search,
+                    semanticLabel: "Search",
+                  ),
                 ),
               ),
               InkWell(
@@ -311,7 +321,11 @@ class _ChatRoomState extends State<ChatRoom>
                 },
                 child: Container(
                     padding: EdgeInsets.fromLTRB(0, 0, 12, 0),
-                    child: Icon(Icons.person_rounded)),
+                    child: Icon(
+                        Icons.person_rounded,
+                      semanticLabel: "Profile",
+                    )
+                ),
               ),
             ],
             bottom: TabBar(
@@ -375,6 +389,7 @@ class ChatRoomsTile extends StatefulWidget {
   String blackbg;
   String whitebg;
   bool isImage;
+  bool isSoundEnabled;
 
   ChatRoomsTile(
       {this.username,
@@ -390,7 +405,8 @@ class ChatRoomsTile extends StatefulWidget {
       this.lastMsgTimeStamp,
       this.blackbg,
       this.whitebg,
-      this.isImage});
+      this.isImage,
+      this.isSoundEnabled});
 
   @override
   _ChatRoomsTileState createState() => _ChatRoomsTileState();
@@ -574,6 +590,7 @@ class _ChatRoomsTileState extends State<ChatRoomsTile> {
                                           myUrl: widget.myUrl,
                                           whitebg: widget.whitebg,
                                           blackbg: widget.blackbg,
+                                          isSoundEnabled: widget.isSoundEnabled
                                         ))).then((value) async {
                               await dataBaseMethods
                                   .getUserStatus(widget.username)

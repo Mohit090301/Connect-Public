@@ -55,6 +55,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
   final picker = ImagePicker();
   String imageUrl;
   bool loading = false;
+  List<dynamic> receivedByCopy = [];
 
   Widget ChatMessageList() {
     print(widget.receivedBy);
@@ -124,7 +125,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
       Map<String, dynamic> messageMap = {
         "message": messageController.text,
         "sendBy": Constants.myName,
-        "receivedBy": widget.receivedBy,
+        "receivedBy": receivedByCopy,
         "time": timeStamp,
         "msgTime": DateFormat.jm().format(DateTime.now()),
         "msgDate": DateTimeFormat.format(dateTime),
@@ -183,7 +184,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
       "msgTime": DateFormat.jm().format(DateTime.now()),
       "msgDate": DateTimeFormat.format(dateTime),
       "isImage": true,
-      "receivedBy": widget.receivedBy,
+      "receivedBy": receivedByCopy,
       "groupName": widget.groupName
     };
 
@@ -202,6 +203,13 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
         chatMessageStream = value;
       });
     });
+    for(dynamic s in widget.receivedBy){
+      int pos = 0;
+      if(s!=Constants.myName) {
+        receivedByCopy.insert(pos, s);
+        pos++;
+      }
+    }
     super.initState();
   }
 

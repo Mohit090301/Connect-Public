@@ -7,8 +7,8 @@ import 'package:flutter_chat_app/views/change_background_image.dart';
 
 class settings extends StatefulWidget {
   bool value;
-
-  settings({this.value});
+  bool isSoundEnabled;
+  settings({this.value, this.isSoundEnabled});
 
   @override
   _settingsState createState() => _settingsState();
@@ -21,6 +21,7 @@ class _settingsState extends State<settings> {
   bool tap = false;
   String blackUrl = "";
   String whiteUrl = "";
+  bool isSoundEnabled = true;
 
   void setTheme(bool value) async {
     print(value);
@@ -43,6 +44,7 @@ class _settingsState extends State<settings> {
     // TODO: implement initState
     setState(() {
       value = widget.value;
+      isSoundEnabled = widget.isSoundEnabled;
     });
   }
 
@@ -64,7 +66,7 @@ class _settingsState extends State<settings> {
       ),
       body: WillPopScope(
         onWillPop: () async{
-          Navigator.pop(context, [value, whiteUrl, blackUrl]);
+          Navigator.pop(context, [value, whiteUrl, blackUrl, isSoundEnabled]);
           return false;
         },
         child: Container(
@@ -79,7 +81,7 @@ class _settingsState extends State<settings> {
                   Container(
                     width: 0.75 * width,
                     child: Text(
-                      "Change Theme",
+                      "Light Theme",
                       style: TextStyle(
                         color: value ? Colors.black : Colors.white,
                         fontSize: 20,
@@ -101,6 +103,50 @@ class _settingsState extends State<settings> {
                     ),
                   ),
                 ],
+              ),
+              Divider(
+                thickness: 1,
+                color: Colors.grey,
+              ),
+              InkWell(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 0.75 * width,
+                      child: Text(
+                        "Enable Msg Sent Sound ",
+                        style: TextStyle(
+                          color: value ? Colors.black : Colors.white,
+                          fontSize: 20,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      alignment: Alignment.centerRight,
+                      width: 0.25 * width,
+                      child: Switch(
+                        value: isSoundEnabled,
+                        onChanged: (isSoundEnabled) {
+                          print("SOund");
+                          setState((){
+                            final snackBar = SnackBar(
+                              content: Text(
+                                isSoundEnabled ? "Sound Enabled Successfully!" : "Sound Disabled Successfully!",
+                                style: TextStyle(color: value ? Colors.white : Colors.black),
+                              ),
+                              duration: Duration(milliseconds: 900),
+                              backgroundColor: !value ? Colors.white : Colors.black,
+                            );
+                            this.isSoundEnabled = isSoundEnabled;
+                            ScaffoldMessenger.of(context).showSnackBar(snackBar);
+                          });
+                        },
+                        inactiveTrackColor: Colors.grey,
+                      ),
+                    ),
+                  ],
+                ),
               ),
               Divider(
                 thickness: 1,
