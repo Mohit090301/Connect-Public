@@ -12,8 +12,10 @@ import 'package:flutter_chat_app/views/show_image.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'dart:io';
-
+import 'package:assets_audio_player/assets_audio_player.dart';
 import 'package:url_launcher/url_launcher.dart';
+
+IconData currentIcon = Icons.access_time_rounded;
 
 class GroupChatScreen extends StatefulWidget {
   final String groupId;
@@ -23,6 +25,7 @@ class GroupChatScreen extends StatefulWidget {
   String groupPicUrl;
   final bool isWhite;
   final List<dynamic> receivedBy;
+  bool isSoundEnabled;
 
   GroupChatScreen(
       {this.groupId,
@@ -31,7 +34,8 @@ class GroupChatScreen extends StatefulWidget {
       this.blackbg,
       this.whitebg,
       this.groupPicUrl,
-      this.receivedBy});
+      this.receivedBy,
+      this.isSoundEnabled});
 
   @override
   _GroupChatScreenState createState() => _GroupChatScreenState();
@@ -117,10 +121,16 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
 
   @override
   sendMessage() async {
-    print("send messsage called");
-    List<String> receivedBy;
-
     if (messageController.text.isNotEmpty) {
+      setState(() {
+        currentIcon = Icons.access_time_rounded;
+      });
+      if (widget.isSoundEnabled) {
+        await AssetsAudioPlayer.playAndForget(
+            Audio('assets/msg_sent_sound2.aac', playSpeed: 1.9),
+            volume: 1,
+            seek: Duration(seconds: 0));
+      }
       int timeStamp = DateTime.now().millisecondsSinceEpoch;
       Map<String, dynamic> messageMap = {
         "message": messageController.text,
@@ -131,9 +141,21 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
         "msgDate": DateTimeFormat.format(dateTime),
         "groupName": widget.groupName
       };
-
-      messageController.text = "";
+      Map<String, dynamic> groupChatRoomMap = {
+        "lastMsgTimeStamp": timeStamp,
+        "lastMsgTime": DateFormat.jm().format(DateTime.now()).toString(),
+        "lastMsg": messageController.text,
+        "SendBy": Constants.myName,
+        "isImage": false,
+        "isVideo": false,
+      };
+      messageController.clear();
       await dataBaseMethods.addGroupMessages(widget.groupId, messageMap);
+      await dataBaseMethods.updateGroupChatRoom(widget.groupId, groupChatRoomMap);
+      //await Future.delayed(Duration(seconds: 1));
+      setState(() {
+        currentIcon = CupertinoIcons.eye_fill;
+      });
     }
   }
 
@@ -203,9 +225,9 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
         chatMessageStream = value;
       });
     });
-    for(dynamic s in widget.receivedBy){
+    for (dynamic s in widget.receivedBy) {
       int pos = 0;
-      if(s!=Constants.myName) {
+      if (s != Constants.myName) {
         receivedByCopy.insert(pos, s);
         pos++;
       }
@@ -270,6 +292,14 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                     SizedBox(
                       height: 1,
                     ),
+                    Text(
+                      "Tap for group info",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w300
+                    ),
+                    )
                   ],
                 ),
               ),
@@ -452,6 +482,7 @@ class MessageTile extends StatefulWidget {
       this.sendBy,
       this.receivedBy}) {
     print("Message Tile called");
+    print(lastMsg);
     if (compare != null && compare != "") {
       compare = compare.substring(0, 10);
       compare = compare.split('-').reversed.join('-');
@@ -730,8 +761,7 @@ class _MessageTileState extends State<MessageTile> {
                             builder: (context, snapshot) {
                               if (!widget.isLastMessageSeen) findSeen();
                               return Container(
-                                width:
-                                    widget.message == widget.lastMsg ? 57 : 57,
+                                width: 75,
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.end,
                                   children: [
@@ -748,6 +778,12 @@ class _MessageTileState extends State<MessageTile> {
                                     SizedBox(
                                       width: 3,
                                     ),
+                                    Icon(
+                                      currentIcon,
+                                      size: widget.message == widget.lastMsg
+                                          ? 13
+                                          : 0,
+                                    )
                                   ],
                                 ),
                               );

@@ -147,15 +147,21 @@ class _ChatRoomState extends State<ChatRoom>
                 itemBuilder: (context, index) {
                   print(snapshot.data.docs[index].data()["users"]);
                   return GroupTile(
-                    groupName: snapshot.data.docs[index].data()["groupName"],
-                    groupPicUrl:
-                        snapshot.data.docs[index].data()["groupPicUrl"],
-                    isWhite: isWhite,
-                    groupId: snapshot.data.docs[index].data()["groupId"],
-                    blackbg: blackbg,
-                    whitebg: whitebg,
-                    receivedBy: snapshot.data.docs[index].data()["users"],
-                  );
+                      groupName: snapshot.data.docs[index].data()["groupName"],
+                      groupPicUrl:
+                          snapshot.data.docs[index].data()["groupPicUrl"],
+                      isWhite: isWhite,
+                      groupId: snapshot.data.docs[index].data()["groupId"],
+                      blackbg: blackbg,
+                      whitebg: whitebg,
+                      receivedBy: snapshot.data.docs[index].data()["users"],
+                      isSoundEnabled: isSoundEnabled,
+                      lastMsg: snapshot.data.docs[index].data()["lastMsg"],
+                      lastMsgSendBy: snapshot.data.docs[index].data()["SendBy"],
+                      lastMsgTime:
+                          snapshot.data.docs[index].data()["lastMsgTime"],
+                      lastMsgTimeStamp:
+                          snapshot.data.docs[index].data()["lastMsgTimeStamp"]);
                 })
             : Container();
       },
@@ -272,7 +278,7 @@ class _ChatRoomState extends State<ChatRoom>
                                 isSoundEnabled: isSoundEnabled,
                               ))).then((value) {
                     if (mounted) {
-                      print(isSoundEnabled.toString() +  " sound");
+                      print(isSoundEnabled.toString() + " sound");
                       setState(() {
                         isWhite = value[0];
                         whitebg = value[1] == "" ? whitebg : value[1];
@@ -304,7 +310,7 @@ class _ChatRoomState extends State<ChatRoom>
                 child: Container(
                   padding: EdgeInsets.symmetric(horizontal: 5),
                   child: Icon(
-                      Icons.search,
+                    Icons.search,
                     semanticLabel: "Search",
                   ),
                 ),
@@ -322,10 +328,9 @@ class _ChatRoomState extends State<ChatRoom>
                 child: Container(
                     padding: EdgeInsets.fromLTRB(0, 0, 12, 0),
                     child: Icon(
-                        Icons.person_rounded,
+                      Icons.person_rounded,
                       semanticLabel: "Profile",
-                    )
-                ),
+                    )),
               ),
             ],
             bottom: TabBar(
@@ -581,17 +586,18 @@ class _ChatRoomsTileState extends State<ChatRoomsTile> {
                                 context,
                                 MaterialPageRoute(
                                     builder: (context) => ConversationScreen(
-                                          username: widget.username,
-                                          chatRoomId: widget.chatRoom,
-                                          imageUrl: widget.url,
-                                          mailid: widget.email,
-                                          isLastMsgSeen: widget.isSeen,
-                                          isWhite: widget.isWhite,
-                                          myUrl: widget.myUrl,
-                                          whitebg: widget.whitebg,
-                                          blackbg: widget.blackbg,
-                                          isSoundEnabled: widget.isSoundEnabled
-                                        ))).then((value) async {
+                                        username: widget.username,
+                                        chatRoomId: widget.chatRoom,
+                                        imageUrl: widget.url,
+                                        mailid: widget.email,
+                                        isLastMsgSeen: widget.isSeen,
+                                        isWhite: widget.isWhite,
+                                        myUrl: widget.myUrl,
+                                        whitebg: widget.whitebg,
+                                        blackbg: widget.blackbg,
+                                        isSoundEnabled:
+                                            widget.isSoundEnabled))).then(
+                                (value) async {
                               await dataBaseMethods
                                   .getUserStatus(widget.username)
                                   .then((val) {
@@ -744,6 +750,11 @@ class GroupTile extends StatefulWidget {
   String blackbg;
   String whitebg;
   List<dynamic> receivedBy;
+  bool isSoundEnabled;
+  String lastMsg;
+  String lastMsgSendBy;
+  String lastMsgTime;
+  int lastMsgTimeStamp;
 
   GroupTile(
       {this.groupName,
@@ -752,7 +763,12 @@ class GroupTile extends StatefulWidget {
       this.groupId,
       this.whitebg,
       this.blackbg,
-      this.receivedBy});
+      this.receivedBy,
+      this.isSoundEnabled,
+      this.lastMsg,
+      this.lastMsgTime,
+      this.lastMsgSendBy,
+      this.lastMsgTimeStamp});
 
   @override
   _GroupTileState createState() => _GroupTileState();
@@ -761,7 +777,29 @@ class GroupTile extends StatefulWidget {
 class _GroupTileState extends State<GroupTile> {
   @override
   Widget build(BuildContext context) {
+    print("hi");
+    double width = MediaQuery.of(context).size.width - 50;
+
+    var lasMsgDate;
+    if (widget.lastMsgTimeStamp == null)
+      widget.lastMsgTimeStamp = 1630858069469;
+    lasMsgDate = DateTime.fromMillisecondsSinceEpoch(widget.lastMsgTimeStamp);
+    print("hi");
+    int diff = DateTime.now().difference(lasMsgDate).inDays;
+    print("hi");
+    String todaysDate = DateTimeFormat.format(DateTime.now())
+        .toString()
+        .substring(0, 10)
+        .split('-')
+        .reversed
+        .join('-');
+    String lmd =
+        lasMsgDate.toString().substring(0, 10).split('-').reversed.join('-');
+    if (diff == 1) diff = 2;
+    if (lmd == todaysDate) diff = 0;
+    if (diff == 0 && lmd != todaysDate) diff = 1;
     print(widget.groupName);
+    print(width);
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       child: Row(
@@ -825,6 +863,7 @@ class _GroupTileState extends State<GroupTile> {
                             whitebg: widget.whitebg,
                             isWhite: widget.isWhite,
                             receivedBy: widget.receivedBy,
+                            isSoundEnabled: widget.isSoundEnabled,
                           )));
             },
             child: Container(
@@ -834,14 +873,54 @@ class _GroupTileState extends State<GroupTile> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    widget.groupName,
-                    style: TextStyle(
-                      color: widget.isWhite ? Colors.black87 : Colors.white,
-                      fontSize: 19,
-                      //fontWeight: FontWeight.w600
-                    ),
+                  Row(
+                    children: [
+                      Container(
+                        width: width * 0.62,
+                        child: Text(
+                          widget.groupName,
+                          style: TextStyle(
+                            color:
+                                widget.isWhite ? Colors.black87 : Colors.white,
+                            fontSize: 19,
+                            //fontWeight: FontWeight.w600
+                          ),
+                        ),
+                      ),
+                      Container(
+                        width: width * 0.29,
+                        child: Text(
+                          widget.lastMsgTime != null
+                              ? diff == 0
+                                  ? widget.lastMsgTime
+                                  : diff == 1
+                                      ? "Yesterday"
+                                      : lasMsgDate.format("d/m/y")
+                              : "",
+                          style: TextStyle(
+                            fontSize: 12,
+                            color:
+                                widget.isWhite ? Colors.grey[700] : Colors.grey,
+                          ),
+                          textAlign: TextAlign.end,
+                        ),
+                      )
+                    ],
                   ),
+                  SizedBox(
+                    height: 2,
+                  ),
+                  Text(
+                    widget.lastMsg == null
+                        ? "Null"
+                        : widget.lastMsgSendBy == Constants.myName
+                            ? "Me: " + widget.lastMsg
+                            : widget.lastMsgSendBy + ": " + widget.lastMsg,
+                    style: TextStyle(
+                        color: Colors.grey,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w400),
+                  )
                 ],
               ),
             ),

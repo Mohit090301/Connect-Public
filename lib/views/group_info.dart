@@ -129,7 +129,7 @@ class _GroupInfoState extends State<GroupInfo> {
                   print("add profile pic");
                 },
                 child: Container(
-                  height: 150,
+                  height: MediaQuery.of(context).size.height/5,
                   child: Center(
                     child: Stack(
                       children: [
@@ -138,8 +138,8 @@ class _GroupInfoState extends State<GroupInfo> {
                             children: [
                               Container(
                                 alignment: Alignment.center,
-                                height: 150,
-                                width: 150,
+                                height: MediaQuery.of(context).size.height/5,
+                                width: MediaQuery.of(context).size.height/5,
                                 decoration: BoxDecoration(
                                   image: DecorationImage(
                                     fit: BoxFit.cover,
@@ -277,7 +277,7 @@ class _GroupInfoState extends State<GroupInfo> {
               ),
               Container(
                 width: MediaQuery.of(context).size.width - 50,
-                  height: MediaQuery.of(context).size.height/3 - 30,
+                  height: MediaQuery.of(context).size.height/3.5,
                   child: ListView.builder(
                     scrollDirection: Axis.vertical,
                     itemCount: widget.users.length,
@@ -309,7 +309,7 @@ class UserTile extends StatelessWidget {
         username,
         style: TextStyle(
           color: isWhite ? Colors.black : Colors.white,
-          fontSize: 21,
+          fontSize: 18,
           fontWeight: FontWeight.bold
         ),
       ),

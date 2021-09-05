@@ -202,6 +202,16 @@ class DataBaseMethods {
         .update(chatRoomMap);
   }
 
+  updateGroupChatRoom(String groupId, groupChatRoomMap) async {
+    await FirebaseFirestore.instance
+        .collection('groups').where("groupId", isEqualTo: groupId).get().then((value){
+      value.docs.forEach((element) async{
+        print(element.id);
+        await FirebaseFirestore.instance.collection('groups').doc(element.id).update(groupChatRoomMap);
+      });
+    });
+  }
+
   getLastMessageSeen() async {
     await FirebaseFirestore.instance.collection("ChatRoom").snapshots();
   }
@@ -222,8 +232,6 @@ class DataBaseMethods {
         } else {
           urls[1] = url;
         }
-        String n1 = Constants.myName + "height";
-        String n2 = Constants.myName + "width";
         FirebaseFirestore.instance
             .collection('ChatRoom')
             .doc(element.id)
