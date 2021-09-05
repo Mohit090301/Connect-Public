@@ -17,7 +17,7 @@ The database used for storing user's data(name, email, profile pic only) and cha
 The app consists of 10 screens:-
 * Sign up screen - In this screen, one can sign up by providing their username, email and password(There are certain restrictions like the username can't be less than 4 letters, password must be atleast 8 characters and the mail shoukd be in proper format)
 * Sign In screen - In this screen, one can sign in with his/her email and password provided at the time of signup.
-* Chat Room Screen - In this screen you can see the names of all the user's you have messaged, and the settings, profile and search icon.
+* Chat Room Screen - In this screen you can see the names of all the user's you have messaged, and the settings, profile and search icon. Also you can see the groups in which you are a part of by sliding through the tab
 * Search screen - By tapping at the search button in the Chat Room screen you will be taken to this screen where you can search any user (by their username) you want to text.
 * Conversation Screen - In this screen, you can see the profile pic, name and status(whether typing, online or last seen at some time) of the user you are talking to and also all the messages you have sent to each other in proper order.This is the screen where you can "Connect" with the other user.
 * Change Profile Screen - By tapping on the profile button in the Chat Room screen, you will be taken to this screen where you can see your own username and email that you provided at the time of Sign Up and in this screen you also have an option to see, update, remove or add your profile pic.
@@ -76,5 +76,7 @@ Packages used:-
 -v1.1.3 -> Added a feature which lets users to share images between them.The images shared are not stored in the phone device.Also added feature to display in a new screen the profile pic and the pics shared in the chat by tapping on the photo.
 
 -v1.1.31 -> Added the ability to zoom in and zoom out any photo viewed by the user.Made some UI enhancements as well.
+
+-v1.1.8 -> Added group chat feature and message sending sound(it can be turned off by the user from the settings screen)
  
            
