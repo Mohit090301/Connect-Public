@@ -2,12 +2,14 @@ import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:date_time_format/date_time_format.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter_chat_app/helper/constants.dart';
 import 'package:flutter_chat_app/services/database.dart';
+import 'package:flutter_chat_app/views/pdf_viewer.dart';
 import 'package:flutter_chat_app/views/play_video.dart';
 import 'package:flutter_chat_app/views/show_image.dart';
 import 'package:flutter_chat_app/views/show_profile_pic.dart';
@@ -16,7 +18,9 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'dart:math';
 import 'package:assets_audio_player/assets_audio_player.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 
 IconData msgIcon;
 
@@ -63,6 +67,7 @@ class _ConversationScreenState extends State<ConversationScreen>
   String useremail;
   bool isLastMsgSeen;
   File image;
+  File pdf;
   String uploadedFileURL;
   final picker = ImagePicker();
   String imageUrl;
@@ -92,32 +97,33 @@ class _ConversationScreenState extends State<ConversationScreen>
                   itemCount: snapshot.data.docs.length,
                   itemBuilder: (context, index) {
                     return MessageTile(
-                        message: snapshot.data.docs[index].data()["message"],
-                        isSendByMe:
-                            snapshot.data.docs[index].data()["sendBy"] ==
-                                Constants.myName,
-                        isNextMsgSendByMe: index > 0
-                            ? snapshot.data.docs[index - 1].data()["sendBy"] ==
-                                Constants.myName
-                            : false,
-                        msgTime: snapshot.data.docs[index].data()["msgTime"],
-                        lastMsg: snapshot.data.docs[0].data()["message"],
-                        lastMsgDate: snapshot.data.docs.length >= 1
-                            ? snapshot.data.docs[index].data()["msgDate"]
-                            : "",
-                        compare: index < snapshot.data.docs.length - 1
-                            ? snapshot.data.docs[index + 1].data()["msgDate"]
-                            : "",
-                        compareMsg: index < snapshot.data.docs.length - 1
-                            ? snapshot.data.docs[index + 1].data()["message"]
-                            : "",
-                        isLastMessageSeen:
-                            isLastMsgSeen == null ? false : isLastMsgSeen,
-                        username: widget.username,
-                        chatRoomId: widget.chatRoomId,
-                        isWhite: widget.isWhite,
-                        isImage: snapshot.data.docs[index].data()["isImage"],
-                        isVideo: snapshot.data.docs[index].data()["isVideo"]);
+                      message: snapshot.data.docs[index].data()["message"],
+                      isSendByMe: snapshot.data.docs[index].data()["sendBy"] ==
+                          Constants.myName,
+                      isNextMsgSendByMe: index > 0
+                          ? snapshot.data.docs[index - 1].data()["sendBy"] ==
+                              Constants.myName
+                          : false,
+                      msgTime: snapshot.data.docs[index].data()["msgTime"],
+                      lastMsg: snapshot.data.docs[0].data()["message"],
+                      lastMsgDate: snapshot.data.docs.length >= 1
+                          ? snapshot.data.docs[index].data()["msgDate"]
+                          : "",
+                      compare: index < snapshot.data.docs.length - 1
+                          ? snapshot.data.docs[index + 1].data()["msgDate"]
+                          : "",
+                      compareMsg: index < snapshot.data.docs.length - 1
+                          ? snapshot.data.docs[index + 1].data()["message"]
+                          : "",
+                      isLastMessageSeen:
+                          isLastMsgSeen == null ? false : isLastMsgSeen,
+                      username: widget.username,
+                      chatRoomId: widget.chatRoomId,
+                      isWhite: widget.isWhite,
+                      isImage: snapshot.data.docs[index].data()["isImage"],
+                      isVideo: snapshot.data.docs[index].data()["isVideo"],
+                      isPdf: snapshot.data.docs[index].data()["isPdf"],
+                    );
                   },
                 ),
               )
@@ -157,6 +163,7 @@ class _ConversationScreenState extends State<ConversationScreen>
         "receivedBy": widget.username,
         "isImage": false,
         "isVideo": false,
+        "isPdf": false
       };
       Map<String, dynamic> chatRoomMap = {
         "lastMsgTimeStamp": timeStamp,
@@ -166,6 +173,7 @@ class _ConversationScreenState extends State<ConversationScreen>
         "seen": false,
         "isImage": false,
         "isVideo": false,
+        "isPdf": false
       };
       messageController.clear();
       await dataBaseMethods.addConversationMessages(
@@ -221,26 +229,27 @@ class _ConversationScreenState extends State<ConversationScreen>
   Future pickImageGallery(context) async {
     final pickedFile =
         await picker.getImage(source: ImageSource.gallery, imageQuality: 100);
+    final pickedDocument = (await getExternalStorageDirectories());
     if (pickedFile != null) {
       image = File(pickedFile.path);
-      uploadFile(context, true, false);
+      uploadFile(context, true, false, false);
       print("URL added");
     }
     setState(() {});
   }
 
-  Future pickVideoGallery(context) async {
-    final pickedFile = await picker.getVideo(
-        source: ImageSource.gallery, maxDuration: Duration(seconds: 30));
-    if (pickedFile != null) {
-      image = File(pickedFile.path);
-      uploadFile(context, false, true);
-      print("URL added");
+  Future pickPdf(context) async {
+    FilePickerResult result = await FilePicker.platform
+        .pickFiles(type: FileType.custom, allowedExtensions: ['pdf']);
+    if (result != null) {
+      image = File(result.files.single.path);
+      uploadFile(context, false, false, true);
+    } else {
+      // User canceled the picker
     }
-    setState(() {});
   }
 
-  Future uploadFile(context, bool isImage, bool isVideo) async {
+  Future uploadFile(context, bool isImage, bool isVideo, bool isPdf) async {
     setState(() {
       loading = true;
     });
@@ -267,15 +276,17 @@ class _ConversationScreenState extends State<ConversationScreen>
       "receivedBy": widget.username,
       "isImage": isImage,
       "isVideo": isVideo,
+      "isPdf": isPdf
     };
     Map<String, dynamic> chatRoomMap = {
       "lastMsgTimeStamp": timeStamp,
       "lastMsgTime": DateFormat.jm().format(DateTime.now()).toString(),
-      "lastMsg": "Image",
+      "lastMsg": isImage ? "Image" : isPdf ? "PDF" : "Video",
       "SendBy": Constants.myName,
       "seen": false,
       "isImage": isImage,
-      "isVideo": isVideo
+      "isVideo": isVideo,
+      "isPdf": isPdf
     };
     await dataBaseMethods.addConversationMessages(
         widget.chatRoomId, messageMap);
@@ -294,7 +305,6 @@ class _ConversationScreenState extends State<ConversationScreen>
     setState(() {
       msgIcon = CupertinoIcons.eye_fill;
     });
-
   }
 
   @override
@@ -482,15 +492,15 @@ class _ConversationScreenState extends State<ConversationScreen>
                           messageController.text == ""
                               ? GestureDetector(
                                   onTap: () {
-                                    // TODO:Implement video player
+                                    pickPdf(context);
                                   },
                                   child: Container(
                                     padding: EdgeInsets.fromLTRB(0, 1, 0, 7),
-                                    height: 30,
-                                    width: 30,
+                                    height: 27,
+                                    width: 20,
                                     child: Icon(
-                                      Icons.videocam,
-                                      size: 29,
+                                      Icons.insert_drive_file,
+                                      size: 25,
                                       color: Colors.black,
                                     ),
                                   ),
@@ -572,7 +582,7 @@ class MessageTile extends StatefulWidget {
   String chatRoomId;
   bool isWhite;
   DateTime diffDate;
-  bool isImage, isVideo;
+  bool isImage, isVideo, isPdf;
 
   MessageTile(
       {this.message,
@@ -588,7 +598,11 @@ class MessageTile extends StatefulWidget {
       this.isWhite,
       this.isNextMsgSendByMe,
       this.isImage,
-      this.isVideo}) {
+      this.isVideo,
+      this.isPdf}) {
+    if (isPdf == null) isPdf = false;
+    if (isVideo == null) isVideo = false;
+    if (isImage == null) isImage = false;
     if (compare != null && compare != "") {
       compare = compare.substring(0, 10);
       compare = compare.split('-').reversed.join('-');
@@ -607,6 +621,7 @@ class MessageTile extends StatefulWidget {
 class _MessageTileState extends State<MessageTile> {
   Stream chatMessageStream;
   DataBaseMethods dataBaseMethods = new DataBaseMethods();
+  final GlobalKey<SfPdfViewerState> _pdfViewerKey = GlobalKey();
 
   @override
   void initState() {
@@ -784,8 +799,7 @@ class _MessageTileState extends State<MessageTile> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    (widget.isImage == null && widget.isVideo == null) ||
-                            (!widget.isImage && !widget.isVideo)
+                    (!widget.isImage && !widget.isVideo && !widget.isPdf)
                         ? widget.message != null &&
                                     widget.message.length <= 10 ||
                                 !widget.message.contains("https://", 0)
@@ -814,7 +828,7 @@ class _MessageTileState extends State<MessageTile> {
                                   ),
                                 ),
                               )
-                        : widget.isVideo == null || !widget.isVideo
+                        : widget.isImage
                             ? InkWell(
                                 onTap: () {
                                   Navigator.push(
@@ -845,36 +859,67 @@ class _MessageTileState extends State<MessageTile> {
                                   ),
                                 ),
                               )
-                            : GestureDetector(
-                                onTap: () {
-                                  String videoLink = widget.message + ".mp4";
-                                  print(videoLink);
-                                  Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                          builder: (context) => PlayVideo(videoLink: videoLink)));
-                                },
-                                child: Container(
-                                  width: 75,
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.end,
-                                    children: [
-                                      Icon(
-                                        Icons.play_arrow,
-                                        color: Colors.white,
+                            : widget.isVideo
+                                ? GestureDetector(
+                                    onTap: () {
+                                      String videoLink =
+                                          widget.message + ".mp4";
+                                      print(videoLink);
+                                      Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                              builder: (context) => PlayVideo(
+                                                  videoLink: videoLink)));
+                                    },
+                                    child: Container(
+                                      width: 75,
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.end,
+                                        children: [
+                                          Icon(
+                                            Icons.play_arrow,
+                                            color: Colors.white,
+                                          ),
+                                          Text(
+                                            "Video",
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                      Text(
-                                        "Video",
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                        ),
+                                    ),
+                                  )
+                                : GestureDetector(
+                                    onTap: () {
+                                      Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                              builder: (context) => PdfViewer(
+                                                  pdfUrl: widget.message, isWhite: widget.isWhite,)));
+                                     // launch(widget.message);
+                                    },
+                                    child: Container(
+                                      width: 75,
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.end,
+                                        children: [
+                                          Text(
+                                            "View pdf",
+                                            style: TextStyle(
+                                              color: Colors.blue,
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                    ],
+                                    ),
                                   ),
-                                ),
-                              ),
                     !widget.isSendByMe
                         ? Container(
                             child: Text(

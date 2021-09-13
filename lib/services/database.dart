@@ -50,8 +50,8 @@ class DataBaseMethods {
         .collection("tokens")
         .doc("Notification Token")
         .set(TokenModel(
-        token: tokenMap['token'], createdAt: tokenMap['createdAt'])
-        .toJson());
+                token: tokenMap['token'], createdAt: tokenMap['createdAt'])
+            .toJson());
     print('token added');
   }
 
@@ -71,8 +71,11 @@ class DataBaseMethods {
   }
 
   addGroupMessages(String groupId, messageMap) async {
-    await FirebaseFirestore.instance.collection('groups').where(
-        "groupId", isEqualTo: groupId).get().then((value) {
+    await FirebaseFirestore.instance
+        .collection('groups')
+        .where("groupId", isEqualTo: groupId)
+        .get()
+        .then((value) {
       print(value);
       value.docs.forEach((element) {
         FirebaseFirestore.instance
@@ -95,13 +98,17 @@ class DataBaseMethods {
 
   getGroupMessages(String groupId) async {
     String id;
-    await FirebaseFirestore.instance.collection('groups').where(
-        "groupId", isEqualTo: groupId).get().then((value) {
+    await FirebaseFirestore.instance
+        .collection('groups')
+        .where("groupId", isEqualTo: groupId)
+        .get()
+        .then((value) {
       value.docs.forEach((element) async {
         id = element.id;
       });
     });
-    return await FirebaseFirestore.instance.collection('groups')
+    return await FirebaseFirestore.instance
+        .collection('groups')
         .doc(id)
         .collection('chats')
         .orderBy("time", descending: true)
@@ -119,7 +126,9 @@ class DataBaseMethods {
   getGroups() async {
     return await FirebaseFirestore.instance
         .collection('groups')
-        .where("users", arrayContains: Constants.myName).snapshots();
+        .where("users", arrayContains: Constants.myName)
+        .orderBy("lastMsgTimeStamp", descending: true)
+        .snapshots();
   }
 
   setStatus(String username, statusMap) async {
@@ -188,10 +197,14 @@ class DataBaseMethods {
     await FirebaseFirestore.instance
         .collection("groups")
         .where("groupId", isEqualTo: groupId)
-        .get().then((value) {
-          value.docs.forEach((element) async{
-            await FirebaseFirestore.instance.collection('groups').doc(element.id).update({"groupPicUrl" : url});
-          });
+        .get()
+        .then((value) {
+      value.docs.forEach((element) async {
+        await FirebaseFirestore.instance
+            .collection('groups')
+            .doc(element.id)
+            .update({"groupPicUrl": url});
+      });
     });
   }
 
@@ -204,10 +217,16 @@ class DataBaseMethods {
 
   updateGroupChatRoom(String groupId, groupChatRoomMap) async {
     await FirebaseFirestore.instance
-        .collection('groups').where("groupId", isEqualTo: groupId).get().then((value){
-      value.docs.forEach((element) async{
+        .collection('groups')
+        .where("groupId", isEqualTo: groupId)
+        .get()
+        .then((value) {
+      value.docs.forEach((element) async {
         print(element.id);
-        await FirebaseFirestore.instance.collection('groups').doc(element.id).update(groupChatRoomMap);
+        await FirebaseFirestore.instance
+            .collection('groups')
+            .doc(element.id)
+            .update(groupChatRoomMap);
       });
     });
   }

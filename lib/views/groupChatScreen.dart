@@ -2,12 +2,14 @@ import 'dart:math';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:date_time_format/date_time_format.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_chat_app/helper/constants.dart';
 import 'package:flutter_chat_app/services/database.dart';
 import 'package:flutter_chat_app/views/group_info.dart';
+import 'package:flutter_chat_app/views/pdf_viewer.dart';
 import 'package:flutter_chat_app/views/show_image.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
@@ -110,6 +112,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                       isWhite: widget.isWhite,
                       isImage: snapshot.data.docs[index].data()["isImage"],
                       receivedBy: widget.receivedBy,
+                      isPdf: snapshot.data.docs[index].data()["isPdf"],
                     );
                   },
                 ),
@@ -151,7 +154,8 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
       };
       messageController.clear();
       await dataBaseMethods.addGroupMessages(widget.groupId, messageMap);
-      await dataBaseMethods.updateGroupChatRoom(widget.groupId, groupChatRoomMap);
+      await dataBaseMethods.updateGroupChatRoom(
+          widget.groupId, groupChatRoomMap);
       //await Future.delayed(Duration(seconds: 1));
       setState(() {
         currentIcon = CupertinoIcons.eye_fill;
@@ -164,40 +168,37 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
         await picker.getImage(source: ImageSource.gallery, imageQuality: 50);
     if (pickedFile != null) {
       image = File(pickedFile.path);
-      uploadFile(context);
+      uploadFile(context, true, false, false);
       print("URL added");
     }
     setState(() {});
   }
 
-  Future pickImageCamera(context) async {
-    final pickedFile =
-        await picker.getImage(source: ImageSource.camera, imageQuality: 50);
-    if (pickedFile != null) {
-      image = File(pickedFile.path);
-      uploadFile(context);
-      print("URL added");
+  Future pickPdf(context) async {
+    FilePickerResult result = await FilePicker.platform
+        .pickFiles(type: FileType.custom, allowedExtensions: ['pdf']);
+    if (result != null) {
+      image = File(result.files.single.path);
+      uploadFile(context, false, false, true);
+    } else {
+      // User canceled the picker
     }
-    setState(() {});
   }
 
-  Future uploadFile(context) async {
+  Future uploadFile(context, bool isImage, bool isVideo, bool isPdf) async {
     setState(() {
       loading = true;
+      currentIcon = CupertinoIcons.eye_fill;
     });
     var r = Random();
     String imageName =
         String.fromCharCodes(List.generate(20, (index) => r.nextInt(33) + 89));
-    print(imageName);
     var snapshot = await FirebaseStorage.instance
         .ref()
         .child(widget.groupName + "." + Constants.myName + imageName)
         .putFile(image)
-        .whenComplete(() {
-      print("complete");
-    });
+        .whenComplete(() {});
     var downloadUrl = await snapshot.ref.getDownloadURL();
-    print(downloadUrl.toString());
     int timeStamp = DateTime.now().millisecondsSinceEpoch;
     Map<String, dynamic> messageMap = {
       "message": downloadUrl,
@@ -205,13 +206,23 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
       "time": timeStamp,
       "msgTime": DateFormat.jm().format(DateTime.now()),
       "msgDate": DateTimeFormat.format(dateTime),
-      "isImage": true,
       "receivedBy": receivedByCopy,
-      "groupName": widget.groupName
+      "groupName": widget.groupName,
+      "isImage": isImage,
+      "isVideo": isVideo,
+      "isPdf": isPdf,
     };
-
+    Map<String, dynamic> groupChatRoomMap = {
+      "lastMsgTimeStamp": timeStamp,
+      "lastMsgTime": DateFormat.jm().format(DateTime.now()).toString(),
+      "lastMsg": isImage ? "Image" : isPdf ? "PDF" : "Video",
+      "SendBy": Constants.myName,
+      "isImage": isImage,
+      "isVideo": isVideo,
+      "isPdf": isPdf
+    };
     await dataBaseMethods.addGroupMessages(widget.groupId, messageMap);
-
+    await dataBaseMethods.updateGroupChatRoom(widget.groupId, groupChatRoomMap);
     setState(() {
       loading = false;
     });
@@ -221,7 +232,6 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
   void initState() {
     dataBaseMethods.getGroupMessages(widget.groupId).then((value) {
       setState(() {
-        print(value.toString() + " .... ");
         chatMessageStream = value;
       });
     });
@@ -295,10 +305,9 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                     Text(
                       "Tap for group info",
                       style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w300
-                    ),
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w300),
                     )
                   ],
                 ),
@@ -373,14 +382,14 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                           messageController.text == ""
                               ? GestureDetector(
                                   onTap: () {
-                                    pickImageCamera(context);
+                                    pickPdf(context);
                                   },
                                   child: Container(
                                     padding: EdgeInsets.all(8),
                                     height: 40,
                                     width: 30,
                                     child: Icon(
-                                      CupertinoIcons.camera_fill,
+                                      Icons.insert_drive_file,
                                       size: 25,
                                       color: Colors.black,
                                     ),
@@ -462,7 +471,7 @@ class MessageTile extends StatefulWidget {
   bool isLastMessageSeen;
   bool isWhite;
   DateTime diffDate;
-  bool isImage;
+  bool isImage, isPdf;
   String groupName;
   List<dynamic> receivedBy;
 
@@ -480,9 +489,8 @@ class MessageTile extends StatefulWidget {
       this.isImage,
       this.groupName,
       this.sendBy,
-      this.receivedBy}) {
-    print("Message Tile called");
-    print(lastMsg);
+      this.receivedBy,
+      this.isPdf}) {
     if (compare != null && compare != "") {
       compare = compare.substring(0, 10);
       compare = compare.split('-').reversed.join('-');
@@ -492,6 +500,8 @@ class MessageTile extends StatefulWidget {
       lastMsgDate = lastMsgDate.split('-').reversed.join('-');
       diffDate = DateFormat('d-M-yyyy').parse(lastMsgDate);
     }
+    if (isImage == null) isImage = false;
+    if (isPdf == null) isPdf = false;
   }
 
   @override
@@ -506,20 +516,13 @@ class _MessageTileState extends State<MessageTile> {
     "Prachii": Colors.amberAccent,
     "Sansku Modi": Colors.blue[400],
     "manav": Colors.lightGreenAccent,
-    "prashant": Colors.blue[400]
+    "prashant": Colors.blue[400],
+    "kritarth": Colors.amberAccent
   };
   int i = 0;
 
   @override
   void initState() {
-    List<Color> col = [
-      Colors.black,
-      Colors.yellowAccent,
-      Colors.red,
-      Colors.blue
-    ];
-
-    //decryptMsg(widget.message);
     dataBaseMethods.getLastMessageSeen().then((value) {
       setState(() {
         chatMessageStream = value;
@@ -532,7 +535,6 @@ class _MessageTileState extends State<MessageTile> {
   void findSeen() async {}
 
   void didChangeAppLifecycleState(AppLifecycleState state) async {
-    print("did change app life cycle called");
     if (state == AppLifecycleState.resumed) {
       setState(() {});
     }
@@ -623,9 +625,8 @@ class _MessageTileState extends State<MessageTile> {
             children: [
               Container(
                 padding: EdgeInsets.symmetric(
-                    horizontal:
-                        widget.isImage != null && widget.isImage ? 5 : 10,
-                    vertical: widget.isImage != null && widget.isImage ? 5 : 7),
+                    horizontal: widget.isImage ? 5 : 10,
+                    vertical: widget.isImage ? 5 : 7),
                 decoration: BoxDecoration(
                     gradient: LinearGradient(
                         colors: widget.isWhite
@@ -683,7 +684,7 @@ class _MessageTileState extends State<MessageTile> {
                             height: 0,
                             width: 0,
                           ),
-                    widget.isImage == null || !widget.isImage
+                    !widget.isImage && !widget.isPdf
                         ? widget.message.length <= 10 ||
                                 !widget.message.contains("https://", 0)
                             ? SelectableText(
@@ -713,35 +714,64 @@ class _MessageTileState extends State<MessageTile> {
                                   ),
                                 ),
                               )
-                        : InkWell(
-                            onTap: () {
-                              Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (context) => ShowImage(
-                                            imageUrl: widget.message,
-                                            appBarText: widget.isSendByMe
-                                                ? "You"
-                                                : widget.groupName,
-                                            tag: widget.message,
-                                          )));
-                            },
-                            child: Container(
-                              height: 300,
-                              width: MediaQuery.of(context).size.width / 1.5,
-                              decoration: BoxDecoration(
-                                image: DecorationImage(
-                                  fit: BoxFit.cover,
-                                  image: CachedNetworkImageProvider(
-                                      widget.message),
+                        : widget.isImage
+                            ? InkWell(
+                                onTap: () {
+                                  Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (context) => ShowImage(
+                                                imageUrl: widget.message,
+                                                appBarText: widget.isSendByMe
+                                                    ? "You"
+                                                    : widget.groupName,
+                                                tag: widget.message,
+                                              )));
+                                },
+                                child: Container(
+                                  height: 300,
+                                  width:
+                                      MediaQuery.of(context).size.width / 1.5,
+                                  decoration: BoxDecoration(
+                                    image: DecorationImage(
+                                      fit: BoxFit.cover,
+                                      image: CachedNetworkImageProvider(
+                                          widget.message),
+                                    ),
+                                    color: widget.isWhite
+                                        ? Colors.transparent
+                                        : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
                                 ),
-                                color: widget.isWhite
-                                    ? Colors.transparent
-                                    : Colors.transparent,
-                                borderRadius: BorderRadius.circular(10),
+                              )
+                            : GestureDetector(
+                                onTap: () {
+                                  Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (context) => PdfViewer(
+                                                pdfUrl: widget.message,
+                                                isWhite: widget.isWhite,
+                                              )));
+                                },
+                                child: Container(
+                                  width: 75,
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      Text(
+                                        "Tap to view pdf",
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ),
-                            ),
-                          ),
                     !widget.isSendByMe
                         ? Container(
                             child: Text(

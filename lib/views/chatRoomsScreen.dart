@@ -48,96 +48,80 @@ class _ChatRoomState extends State<ChatRoom>
 
   Widget ChatRoomList() {
     return StreamBuilder(
-        initialData: repeat,
-        stream: repeat,
-        builder: (context, snapshot) {
-          return Container(
-            child: StreamBuilder(
-              stream: chatRoomsStream,
-              builder: (context, snapshot) {
-                print(snapshot.data);
-                return snapshot.hasData
-                    ? ListView.builder(
-                        cacheExtent: 1000,
-                        itemCount: snapshot.data.docs.length,
-                        itemBuilder: (context, index) {
-                          print(snapshot.data.docs.length);
-                          username = snapshot.data.docs[index]
-                              .data()["chatRoomId"]
-                              .toString()
-                              .replaceAll("*", "")
-                              .replaceAll(Constants.myName, "");
-                          lastmessage =
-                              snapshot.data.docs[index].data()["lastMsg"];
-                          lastMessageTimeStamp = snapshot.data.docs[index]
-                              .data()["lastMsgTimeStamp"];
-                          lastMessagetime =
-                              snapshot.data.docs[index].data()["lastMsgTime"];
-                          return ChatRoomsTile(
-                            username: snapshot.data.docs[index]
-                                .data()["chatRoomId"]
-                                .toString()
-                                .replaceAll("*", "")
-                                .replaceAll(Constants.myName, ""),
-                            chatRoom:
-                                snapshot.data.docs[index].data()["chatRoomId"],
-                            lastMsgTime: snapshot.data.docs[index]
-                                .data()["lastMsgTime"]
-                                .toString(),
-                            lastMsg:
-                                snapshot.data.docs[index].data()["lastMsg"],
-                            lastMsgSendBy:
-                                snapshot.data.docs[index].data()["SendBy"],
-                            isSeen: snapshot.data.docs[index].data()["seen"],
-                            email: widget.email,
-                            isWhite: isWhite,
-                            url: snapshot.data.docs[index].data()["users"][0] ==
-                                    username
-                                ? snapshot.data.docs[index]
-                                            .data()["profilePicUrl"][0] ==
-                                        null
-                                    ? ""
-                                    : snapshot.data.docs[index]
-                                        .data()["profilePicUrl"][0]
-                                : snapshot.data.docs[index]
-                                            .data()["profilePicUrl"][1] ==
-                                        null
-                                    ? ""
-                                    : snapshot.data.docs[index]
-                                        .data()["profilePicUrl"][1],
-                            myUrl: snapshot.data.docs[index].data()["users"]
-                                        [0] ==
-                                    Constants.myName
-                                ? snapshot.data.docs[index]
-                                            .data()["profilePicUrl"][0] ==
-                                        null
-                                    ? ""
-                                    : snapshot.data.docs[index]
-                                        .data()["profilePicUrl"][0]
-                                : snapshot.data.docs[index]
-                                            .data()["profilePicUrl"][1] ==
-                                        null
-                                    ? ""
-                                    : snapshot.data.docs[index]
-                                        .data()["profilePicUrl"][1],
-                            lastMsgTimeStamp: lastMessageTimeStamp,
-                            whitebg: whitebg,
-                            blackbg: blackbg,
-                            isImage:
-                                snapshot.data.docs[index].data()["isImage"],
-                            isSoundEnabled: isSoundEnabled,
-                          );
-                        },
-                      )
-                    : Container();
-              },
-            ),
-          );
-        });
+      stream: chatRoomsStream,
+      builder: (context, snapshot) {
+        return snapshot.hasData
+            ? ListView.builder(
+                itemCount: snapshot.data.docs.length,
+                itemBuilder: (context, index) {
+                  username = snapshot.data.docs[index]
+                      .data()["chatRoomId"]
+                      .toString()
+                      .replaceAll("*", "")
+                      .replaceAll(Constants.myName, "");
+                  lastmessage = snapshot.data.docs[index].data()["lastMsg"];
+                  lastMessageTimeStamp =
+                      snapshot.data.docs[index].data()["lastMsgTimeStamp"];
+                  lastMessagetime =
+                      snapshot.data.docs[index].data()["lastMsgTime"];
+                  return ChatRoomsTile(
+                    username: snapshot.data.docs[index]
+                        .data()["chatRoomId"]
+                        .toString()
+                        .replaceAll("*", "")
+                        .replaceAll(Constants.myName, ""),
+                    chatRoom: snapshot.data.docs[index].data()["chatRoomId"],
+                    lastMsgTime: snapshot.data.docs[index]
+                        .data()["lastMsgTime"]
+                        .toString(),
+                    lastMsg: snapshot.data.docs[index].data()["lastMsg"],
+                    lastMsgSendBy: snapshot.data.docs[index].data()["SendBy"],
+                    isSeen: snapshot.data.docs[index].data()["seen"],
+                    email: widget.email,
+                    isWhite: isWhite,
+                    url: snapshot.data.docs[index].data()["users"][0] ==
+                            username
+                        ? snapshot.data.docs[index].data()["profilePicUrl"]
+                                    [0] ==
+                                null
+                            ? ""
+                            : snapshot.data.docs[index].data()["profilePicUrl"]
+                                [0]
+                        : snapshot.data.docs[index].data()["profilePicUrl"]
+                                    [1] ==
+                                null
+                            ? ""
+                            : snapshot.data.docs[index].data()["profilePicUrl"]
+                                [1],
+                    myUrl: snapshot.data.docs[index].data()["users"][0] ==
+                            Constants.myName
+                        ? snapshot.data.docs[index].data()["profilePicUrl"]
+                                    [0] ==
+                                null
+                            ? ""
+                            : snapshot.data.docs[index].data()["profilePicUrl"]
+                                [0]
+                        : snapshot.data.docs[index].data()["profilePicUrl"]
+                                    [1] ==
+                                null
+                            ? ""
+                            : snapshot.data.docs[index].data()["profilePicUrl"]
+                                [1],
+                    lastMsgTimeStamp: lastMessageTimeStamp,
+                    whitebg: whitebg,
+                    blackbg: blackbg,
+                    isImage: snapshot.data.docs[index].data()["isImage"],
+                    isSoundEnabled: isSoundEnabled,
+                    isPdf: snapshot.data.docs[index].data()["isPdf"],
+                  );
+                },
+              )
+            : Container();
+      },
+    );
   }
 
   Widget groupList() {
-    print("Called group List");
     return StreamBuilder(
       stream: groupStream,
       builder: (context, snapshot) {
@@ -145,7 +129,6 @@ class _ChatRoomState extends State<ChatRoom>
             ? ListView.builder(
                 itemCount: snapshot.data.docs.length,
                 itemBuilder: (context, index) {
-                  print(snapshot.data.docs[index].data()["users"]);
                   return GroupTile(
                       groupName: snapshot.data.docs[index].data()["groupName"],
                       groupPicUrl:
@@ -183,7 +166,6 @@ class _ChatRoomState extends State<ChatRoom>
   void getChats() async {
     await dataBaseMethods.getChatRooms(Constants.myName).then((value) {
       setState(() {
-        print(value.toString() + "value");
         chatRoomsStream = value;
       });
     });
@@ -191,9 +173,9 @@ class _ChatRoomState extends State<ChatRoom>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) async {
-    print("hi");
+    print(AppLifecycleState.values);
+    print("values");
     if (state == AppLifecycleState.resumed) {
-      print("Resumes");
       getChats();
       Map<String, String> statusMap = {"status": "online"};
       ChatRoom(email: widget.email);
@@ -278,7 +260,6 @@ class _ChatRoomState extends State<ChatRoom>
                                 isSoundEnabled: isSoundEnabled,
                               ))).then((value) {
                     if (mounted) {
-                      print(isSoundEnabled.toString() + " sound");
                       setState(() {
                         isWhite = value[0];
                         whitebg = value[1] == "" ? whitebg : value[1];
@@ -393,7 +374,7 @@ class ChatRoomsTile extends StatefulWidget {
   int lastMsgTimeStamp;
   String blackbg;
   String whitebg;
-  bool isImage;
+  bool isImage, isPdf;
   bool isSoundEnabled;
 
   ChatRoomsTile(
@@ -411,7 +392,13 @@ class ChatRoomsTile extends StatefulWidget {
       this.blackbg,
       this.whitebg,
       this.isImage,
-      this.isSoundEnabled});
+      this.isPdf,
+      this.isSoundEnabled}){
+    if(isImage == null)
+      isImage = false;
+    if(isPdf == null)
+      isPdf = false;
+  }
 
   @override
   _ChatRoomsTileState createState() => _ChatRoomsTileState();
@@ -606,7 +593,6 @@ class _ChatRoomsTileState extends State<ChatRoomsTile> {
                                   repeat = null;
                                 });
                               });
-                              print("awaited");
                               initState();
                             });
                           },
@@ -640,7 +626,7 @@ class _ChatRoomsTileState extends State<ChatRoomsTile> {
                                                     : diff == 1
                                                         ? "Yesterday"
                                                         : lasMsgDate
-                                                            .format("d/m/y")
+                                                            .format("d-m-y")
                                                 : "",
                                             style: TextStyle(
                                               fontSize: 12,
@@ -777,16 +763,12 @@ class GroupTile extends StatefulWidget {
 class _GroupTileState extends State<GroupTile> {
   @override
   Widget build(BuildContext context) {
-    print("hi");
     double width = MediaQuery.of(context).size.width - 50;
-
-    var lasMsgDate;
     if (widget.lastMsgTimeStamp == null)
       widget.lastMsgTimeStamp = 1630858069469;
-    lasMsgDate = DateTime.fromMillisecondsSinceEpoch(widget.lastMsgTimeStamp);
-    print("hi");
+    var lasMsgDate =
+        DateTime.fromMillisecondsSinceEpoch(widget.lastMsgTimeStamp);
     int diff = DateTime.now().difference(lasMsgDate).inDays;
-    print("hi");
     String todaysDate = DateTimeFormat.format(DateTime.now())
         .toString()
         .substring(0, 10)
@@ -798,8 +780,6 @@ class _GroupTileState extends State<GroupTile> {
     if (diff == 1) diff = 2;
     if (lmd == todaysDate) diff = 0;
     if (diff == 0 && lmd != todaysDate) diff = 1;
-    print(widget.groupName);
-    print(width);
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       child: Row(
@@ -850,78 +830,81 @@ class _GroupTileState extends State<GroupTile> {
           SizedBox(
             width: 10,
           ),
-          InkWell(
-            onTap: () {
-              Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => GroupChatScreen(
-                            groupId: widget.groupId,
-                            groupName: widget.groupName,
-                            groupPicUrl: widget.groupPicUrl,
-                            blackbg: widget.blackbg,
-                            whitebg: widget.whitebg,
-                            isWhite: widget.isWhite,
-                            receivedBy: widget.receivedBy,
-                            isSoundEnabled: widget.isSoundEnabled,
-                          )));
-            },
-            child: Container(
-              width: MediaQuery.of(context).size.width - 80,
-              height: 40,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: width * 0.62,
-                        child: Text(
-                          widget.groupName,
-                          style: TextStyle(
-                            color:
-                                widget.isWhite ? Colors.black87 : Colors.white,
-                            fontSize: 19,
-                            //fontWeight: FontWeight.w600
+          Flexible(
+            flex: 1,
+            child: InkWell(
+              onTap: () {
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => GroupChatScreen(
+                              groupId: widget.groupId,
+                              groupName: widget.groupName,
+                              groupPicUrl: widget.groupPicUrl,
+                              blackbg: widget.blackbg,
+                              whitebg: widget.whitebg,
+                              isWhite: widget.isWhite,
+                              receivedBy: widget.receivedBy,
+                              isSoundEnabled: widget.isSoundEnabled,
+                            )));
+              },
+              child: Container(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: width * 0.62,
+                          child: Text(
+                            widget.groupName,
+                            style: TextStyle(
+                              color: widget.isWhite
+                                  ? Colors.black87
+                                  : Colors.white,
+                              fontSize: 19,
+                              //fontWeight: FontWeight.w600
+                            ),
                           ),
                         ),
-                      ),
-                      Container(
-                        width: width * 0.29,
-                        child: Text(
-                          widget.lastMsgTime != null
-                              ? diff == 0
-                                  ? widget.lastMsgTime
-                                  : diff == 1
-                                      ? "Yesterday"
-                                      : lasMsgDate.format("d/m/y")
-                              : "",
-                          style: TextStyle(
-                            fontSize: 12,
-                            color:
-                                widget.isWhite ? Colors.grey[700] : Colors.grey,
+                        Container(
+                          width: width * 0.3,
+                          child: Text(
+                            widget.lastMsgTime != null
+                                ? diff == 0
+                                    ? widget.lastMsgTime
+                                    : diff == 1
+                                        ? "Yesterday"
+                                        : lasMsgDate.format("d-m-y")
+                                : "",
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: widget.isWhite
+                                  ? Colors.grey[700]
+                                  : Colors.grey,
+                            ),
+                            textAlign: TextAlign.end,
                           ),
-                          textAlign: TextAlign.end,
-                        ),
-                      )
-                    ],
-                  ),
-                  SizedBox(
-                    height: 2,
-                  ),
-                  Text(
-                    widget.lastMsg == null
-                        ? "Null"
-                        : widget.lastMsgSendBy == Constants.myName
-                            ? "Me: " + widget.lastMsg
-                            : widget.lastMsgSendBy + ": " + widget.lastMsg,
-                    style: TextStyle(
-                        color: Colors.grey,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w400),
-                  )
-                ],
+                        )
+                      ],
+                    ),
+                    SizedBox(
+                      height: 2,
+                    ),
+                    Text(
+                      widget.lastMsg == null
+                          ? "Null"
+                          : widget.lastMsgSendBy == Constants.myName
+                              ? "Me: " + widget.lastMsg
+                              : widget.lastMsgSendBy + ": " + widget.lastMsg,
+                      style: TextStyle(
+                          color: Colors.grey,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w400),
+                    )
+                  ],
+                ),
               ),
             ),
           )

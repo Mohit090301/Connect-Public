@@ -78,5 +78,7 @@ Packages used:-
 -v1.1.31 -> Added the ability to zoom in and zoom out any photo viewed by the user.Made some UI enhancements as well.
 
 -v1.1.8 -> Added group chat feature and message sending sound(it can be turned off by the user from the settings screen)
+
+-v1.2.0 -> Added pdf sharing feature and also integrated pdf viewer
  
            

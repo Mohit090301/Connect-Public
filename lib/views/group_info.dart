@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -47,7 +48,6 @@ class _GroupInfoState extends State<GroupInfo> {
       image = File(pickedFile.path);
       var decodedImage = await decodeImageFromList(image.readAsBytesSync());
       uploadFile(context);
-      print("URL added");
     }
     setState(() {});
   }
@@ -56,17 +56,18 @@ class _GroupInfoState extends State<GroupInfo> {
     setState(() {
       profilePicUploading = true;
     });
+    var r = Random();
+    String imageName =
+    String.fromCharCodes(List.generate(20, (index) => r.nextInt(33) + 89));
     var snapshot = await FirebaseStorage.instance
         .ref()
-        .child(Constants.myName)
+        .child(Constants.myName + "." + imageName)
         .putFile(image)
         .whenComplete(() {
       print("complete");
     });
     var downloadUrl = await snapshot.ref.getDownloadURL();
     await dataBaseMethods.updateGroupPicUrl(downloadUrl, widget.groupId);
-    print(downloadUrl.toString());
-    print('File Uploaded');
     final snackBar = SnackBar(
       content: Text(
         "Profile Pic Updated Successfully!!",
