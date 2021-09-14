@@ -164,22 +164,27 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
   }
 
   Future pickImageGallery(context) async {
-    final pickedFile =
-        await picker.getImage(source: ImageSource.gallery, imageQuality: 50);
+    final pickedFile = await FilePicker.platform.pickFiles(
+        type: FileType.image, allowMultiple: true, allowCompression: false);
     if (pickedFile != null) {
-      image = File(pickedFile.path);
-      uploadFile(context, true, false, false);
-      print("URL added");
+      List<File> files = pickedFile.paths.map((path) => File(path)).toList();
+      for (File file in files) {
+        image = file;
+        uploadFile(context, true, false, false);
+      }
     }
-    setState(() {});
   }
 
   Future pickPdf(context) async {
-    FilePickerResult result = await FilePicker.platform
-        .pickFiles(type: FileType.custom, allowedExtensions: ['pdf']);
+    FilePickerResult result = await FilePicker.platform.pickFiles(
+        type: FileType.custom, allowedExtensions: ['pdf'], allowMultiple: true);
     if (result != null) {
-      image = File(result.files.single.path);
-      uploadFile(context, false, false, true);
+      List<File> files = result.paths.map((path) => File(path)).toList();
+      for (File file in files) {
+        image = file;
+        print(file.absolute.parent.toString() + "Direcotry");
+        uploadFile(context, false, false, true);
+      }
     } else {
       // User canceled the picker
     }
@@ -215,7 +220,11 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     Map<String, dynamic> groupChatRoomMap = {
       "lastMsgTimeStamp": timeStamp,
       "lastMsgTime": DateFormat.jm().format(DateTime.now()).toString(),
-      "lastMsg": isImage ? "Image" : isPdf ? "PDF" : "Video",
+      "lastMsg": isImage
+          ? "Image"
+          : isPdf
+              ? "PDF"
+              : "Video",
       "SendBy": Constants.myName,
       "isImage": isImage,
       "isVideo": isVideo,
@@ -756,19 +765,13 @@ class _MessageTileState extends State<MessageTile> {
                                               )));
                                 },
                                 child: Container(
-                                  width: 75,
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.end,
-                                    children: [
-                                      Text(
-                                        "Tap to view pdf",
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ],
+                                  child: Text(
+                                    "View pdf",
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ),
                               ),

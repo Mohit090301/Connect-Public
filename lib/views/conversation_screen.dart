@@ -18,9 +18,11 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'dart:math';
 import 'package:assets_audio_player/assets_audio_player.dart';
+import 'package:open_file/open_file.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
+import 'package:dio/dio.dart';
 
 IconData msgIcon;
 
@@ -227,23 +229,28 @@ class _ConversationScreenState extends State<ConversationScreen>
   }
 
   Future pickImageGallery(context) async {
-    final pickedFile =
-        await picker.getImage(source: ImageSource.gallery, imageQuality: 100);
-    final pickedDocument = (await getExternalStorageDirectories());
+    final pickedFile = await FilePicker.platform.pickFiles(
+        type: FileType.image, allowMultiple: true, allowCompression: false);
     if (pickedFile != null) {
-      image = File(pickedFile.path);
-      uploadFile(context, true, false, false);
-      print("URL added");
+      List<File> files = pickedFile.paths.map((path) => File(path)).toList();
+      for (File file in files) {
+        image = file;
+        uploadFile(context, true, false, false);
+      }
     }
-    setState(() {});
   }
 
   Future pickPdf(context) async {
-    FilePickerResult result = await FilePicker.platform
-        .pickFiles(type: FileType.custom, allowedExtensions: ['pdf']);
+    FilePickerResult result = await FilePicker.platform.pickFiles(
+        type: FileType.custom, allowedExtensions: ['pdf'], allowMultiple: true);
+    print(result.files.first.extension);
     if (result != null) {
-      image = File(result.files.single.path);
-      uploadFile(context, false, false, true);
+      List<File> files = result.paths.map((path) => File(path)).toList();
+      for (File file in files) {
+        image = file;
+        print(file.absolute.parent.toString() + "Direcotry");
+        uploadFile(context, false, false, true);
+      }
     } else {
       // User canceled the picker
     }
@@ -281,7 +288,11 @@ class _ConversationScreenState extends State<ConversationScreen>
     Map<String, dynamic> chatRoomMap = {
       "lastMsgTimeStamp": timeStamp,
       "lastMsgTime": DateFormat.jm().format(DateTime.now()).toString(),
-      "lastMsg": isImage ? "Image" : isPdf ? "PDF" : "Video",
+      "lastMsg": isImage
+          ? "Image"
+          : isPdf
+              ? "PDF"
+              : "Video",
       "SendBy": Constants.myName,
       "seen": false,
       "isImage": isImage,
@@ -899,24 +910,19 @@ class _MessageTileState extends State<MessageTile> {
                                           context,
                                           MaterialPageRoute(
                                               builder: (context) => PdfViewer(
-                                                  pdfUrl: widget.message, isWhite: widget.isWhite,)));
-                                     // launch(widget.message);
+                                                    pdfUrl: widget.message,
+                                                    isWhite: widget.isWhite,
+                                                  )));
                                     },
                                     child: Container(
-                                      width: 75,
-                                      child: Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.end,
-                                        children: [
-                                          Text(
-                                            "View pdf",
-                                            style: TextStyle(
-                                              color: Colors.blue,
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ],
+                                      // width: 75,
+                                      child: Text(
+                                        "View pdf",
+                                        style: TextStyle(
+                                          color: Colors.blue,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
                                     ),
                                   ),
