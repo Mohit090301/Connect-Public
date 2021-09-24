@@ -1,5 +1,6 @@
 # CONNECT
 ### Chat Application
+#### Due to some privacy reasons I have made the code private
 
 With over 4000 lines of code and many days of struggle, I have built my Chat Application named "Connect" right from scratch using Flutter.
 
